@@ -3,7 +3,29 @@
 A local dashboard that pulls your Instagram video stats (views, reach, likes, comments,
 shares, saves, watch time, skip rate) into a database every day and charts the trends.
 
-## 1. Install (one time)
+## Run it in the cloud (no computer needed)
+
+**Daily sync (GitHub Actions)**
+1. Repo **Settings → Secrets and variables → Actions → New repository secret**:
+   name `IG_ACCESS_TOKEN`, value = your token.
+2. **Actions** tab → **Daily Instagram sync** → **Run workflow** to test it. After that it
+   runs every morning and saves stats to `ig_analytics.db` in the repo.
+3. Optional, for automatic token renewal: create a fine-grained GitHub token with
+   **Secrets: read and write** on this repo and save it as a secret named `GH_PAT`.
+   Without it, replace `IG_ACCESS_TOKEN` with a fresh token every ~60 days
+   (GitHub emails you if the sync starts failing).
+
+**Dashboard (Streamlit Community Cloud)**
+1. Sign in at share.streamlit.io with GitHub → **Create app** → pick this repo,
+   branch `main`, file `app.py` → **Deploy**.
+2. Optional: in the app's **Settings → Secrets**, add `IG_ACCESS_TOKEN = "your token"`
+   so the **Sync now** button works there too.
+
+Keep the repo **private**, since your stats are committed to it.
+
+## Run it on your own computer
+
+### 1. Install (one time)
 
 You need Python 3.10 or newer. Get the code and open a terminal in the folder:
 
@@ -19,13 +41,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 2. Add your token
+### 2. Add your token
 
 1. Copy `.env.example` to a new file named `.env`
 2. Paste your Instagram access token after `IG_ACCESS_TOKEN=`
 3. Save. Never share or upload `.env`.
 
-## 3. Run it
+### 3. Run it
 
 ```
 python sync.py          # pulls your stats (first run takes a minute)
@@ -37,7 +59,7 @@ You can also press **Sync now** inside the dashboard.
 Want to see it before connecting? `python sync.py --demo` fills it with fake data.
 Delete `ig_analytics.db` afterwards to start fresh with your real stats.
 
-## 4. Sync automatically every day
+### 4. Sync automatically every day
 
 Trends build from daily snapshots, so schedule `sync.py` once a day.
 

@@ -7,6 +7,8 @@ Run it once a day (see README for scheduling):
 import argparse
 import os
 import random
+import subprocess
+from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
 
 from dotenv import load_dotenv
@@ -18,9 +20,30 @@ load_dotenv()
 REFRESH_EVERY_DAYS = 7
 
 
-def get_token(conn) -> str:
-    # A refreshed token saved in the database wins over the one in .env.
-    return db.get_setting(conn, "access_token") or os.getenv("IG_ACCESS_TOKEN", "")
+TOKEN_FILE = Path(__file__).with_name(".token")  # gitignored; never stored in the database
+
+
+def get_token(conn=None) -> str:
+    # A refreshed token saved locally wins over the one in .env / GitHub secret.
+    if TOKEN_FILE.exists():
+        return TOKEN_FILE.read_text().strip()
+    return os.getenv("IG_ACCESS_TOKEN", "")
+
+
+def save_token(new: str, log=print):
+    """Store a refreshed token. In GitHub Actions, update the repo secret if GH_PAT is set."""
+    if os.getenv("GITHUB_ACTIONS"):
+        if os.getenv("GH_PAT"):
+            r = subprocess.run(
+                ["gh", "secret", "set", "IG_ACCESS_TOKEN", "--repo", os.environ["GITHUB_REPOSITORY"]],
+                input=new, text=True, capture_output=True, env={**os.environ, "GH_TOKEN": os.environ["GH_PAT"]},
+            )
+            log("Token refreshed and IG_ACCESS_TOKEN secret updated." if r.returncode == 0 else f"Could not update secret: {r.stderr.strip()}")
+        else:
+            log("Token refreshed but not saved (no GH_PAT secret). Replace IG_ACCESS_TOKEN within 60 days.")
+    else:
+        TOKEN_FILE.write_text(new)
+        log("Access token refreshed for another 60 days.")
 
 
 def maybe_refresh(conn, client: InstagramClient, log=print):
@@ -32,10 +55,8 @@ def maybe_refresh(conn, client: InstagramClient, log=print):
     if datetime.now(timezone.utc) - datetime.fromisoformat(last) < timedelta(days=REFRESH_EVERY_DAYS):
         return
     try:
-        new = client.refresh_token()
-        db.set_setting(conn, "access_token", new)
+        save_token(client.refresh_token(), log)
         db.set_setting(conn, "token_refreshed_at", datetime.now(timezone.utc).isoformat())
-        log("Access token refreshed for another 60 days.")
     except InstagramError as e:
         log(f"Token refresh skipped: {e}")
 

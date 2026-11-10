@@ -35,7 +35,8 @@ with st.sidebar:
         except InstagramError as e:
             st.error(f"Instagram error: {e}")
     window = st.selectbox("Trend window", [7, 14, 30, 90], index=0, format_func=lambda d: f"Last {d} days")
-    st.caption("Stats can lag up to 48 hours on Instagram's side.")
+    st.caption("Stats can lag up to 48 hours on Instagram's side. "
+               "The daily GitHub sync saves history; a Sync now on the hosted site is temporary until the next daily run.")
 
 media, snaps, acct = load()
 st.title("📈 Instagram Video Analytics")
@@ -56,6 +57,8 @@ before = (snaps[snaps["captured_date"] <= cutoff].groupby("media_id").tail(1)
 
 table = media.set_index("id").join(latest, how="inner")
 table["views_gained"] = latest["views"] - before["views"]
+interactions = table[["likes", "comments", "shares", "saved"]].fillna(0).sum(axis=1)
+table["total_interactions"] = table["total_interactions"].fillna(interactions)
 table["engagement_rate"] = (table["total_interactions"] / table["views"].replace(0, pd.NA)).astype(float)
 table["avg_watch_s"] = table["avg_watch_ms"] / 1000
 table["title"] = table["caption"].fillna("(no caption)").str.split("\n").str[0].str.slice(0, 60)
