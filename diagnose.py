@@ -18,7 +18,9 @@ load_dotenv()
 def show(label, fn):
     try:
         out = json.dumps(fn())
-        print(f"OK   {label}: {out[:400]}")
+        vals = [(d.get("name"), (d.get("values") or [{}])[0].get("value", d.get("total_value")))
+                for d in (fn_out.get("data", []) if isinstance(fn_out := json.loads(out), dict) else [])]
+        print(f"OK   {label}: {vals if vals else out[:300]}")
     except InstagramError as e:
         print(f"FAIL {label}: {e}")
 
@@ -26,9 +28,11 @@ def show(label, fn):
 c = InstagramClient(get_token())
 host = c.connect()
 print("API host:", host, "| account id set:", c.uid != "me")
-show("permissions", lambda: c._get("me/permissions", host="https://graph.facebook.com").get("data"))
-media = c.list_media(limit=3)
-m = max(media, key=lambda x: x.get("timestamp", ""))
+perms = c._get("me/permissions", host="https://graph.facebook.com").get("data", [])
+print("PERMISSIONS:", ", ".join(f"{p['permission']}={p['status']}" for p in perms))
+media = c.list_media(limit=25)
+reels = [x for x in media if x.get("media_product_type") == "REELS"] or media
+m = max(reels, key=lambda x: x.get("timestamp", ""))
 print("Newest media:", m.get("media_type"), m.get("media_product_type"), m.get("timestamp"))
 
 for metric in ["views", "reach", "saved", "shares", "likes", "comments", "total_interactions",
