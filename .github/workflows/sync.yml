@@ -31,10 +31,17 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: python sync.py
 
-      - name: Save database to repo
+      - name: Build website
+        env:
+          CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+          CREATOR_TAGLINE: ${{ vars.CREATOR_TAGLINE }}
+        run: python build_site.py
+
+      - name: Save database and website to repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f ig_analytics.db
+          git add -f ig_analytics.db docs
           git diff --cached --quiet || git commit -m "Daily Instagram stats $(date -u +%F)"
+          git pull --rebase -q || true
           git push

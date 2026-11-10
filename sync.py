@@ -108,6 +108,13 @@ def run_sync(log=print, include_photos: bool = False) -> int:
         if i % 10 == 0:
             log(f"  {i}/{len(videos)}")
     conn.commit()
+    if videos and client.insight_errors and len(client.insight_errors) >= len(videos):
+        log("WARNING: Instagram returned no views/reach/watch-time insights. Only likes and comments were saved.")
+        log("  First error: " + client.insight_errors[0])
+        rep = client.permission_report()
+        if rep:
+            log("  " + rep)
+        log("  Fix: generate a new token with the instagram_manage_insights permission and update IG_ACCESS_TOKEN.")
     maybe_refresh(conn, client, log)
     log("Sync complete.")
     return len(videos)

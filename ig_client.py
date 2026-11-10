@@ -49,6 +49,7 @@ class InstagramClient:
         self.version = version
         self.host = None   # set by connect()
         self.uid = "me"    # Instagram account ID ("me" on graph.instagram.com)
+        self.insight_errors: list[str] = []
 
     def _get(self, path: str, params: dict | None = None, versioned: bool = True, host: str | None = None) -> dict:
         base = host or self.host or IG_HOST
@@ -115,6 +116,9 @@ class InstagramClient:
             tried.append(f"business portfolio: {e}")
         raise InstagramError("No Instagram account reachable with this token ("
                              + "; ".join(tried) + "). " + self._permission_report())
+
+    def permission_report(self) -> str:
+        return self._permission_report() if self.host == FB_HOST else ""
 
     def _permission_report(self) -> str:
         try:
@@ -201,8 +205,8 @@ class InstagramClient:
             for m in metrics:
                 try:
                     out.update(self._parse(self._get(f"{media_id}/insights", {"metric": m})))
-                except InstagramError:
-                    pass
+                except InstagramError as e:
+                    self.insight_errors.append(f"{m}: {e}")
             return out
 
     @staticmethod

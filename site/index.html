@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Media Kit</title>
+<meta name="description" content="Instagram creator media kit with audience and performance stats.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
+  <main id="app"></main>
+</div>
+<script src="data.js"></script>
+<script src="common.js"></script>
+<script>
+mark("kit");
+const P = D.profile, R = D.reels;
+const now = Date.now(), DAY = 864e5;
+const followers = D.followers.length ? D.followers[D.followers.length - 1].n : null;
+const recent = R.filter(r => (now - dt(r.posted)) / DAY <= 90 && (now - dt(r.posted)) / DAY >= 3);
+const pool = recent.length >= 3 ? recent : R;
+const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+const mains = pool.map(r => val(r)).filter(v => v != null);
+const engs = pool.map(r => r.total && r.total.engagement).filter(v => v != null);
+const total = R.map(r => val(r)).filter(v => v != null).reduce((s, x) => s + x, 0);
+const first = R.length ? dt(R[R.length - 1].posted) : new Date();
+const months = Math.max(1, (now - first) / (30.4 * DAY));
+const contact = D.contact ? `<a class="btn" href="mailto:${esc(D.contact)}?subject=${encodeURIComponent("Partnership with @" + P.username)}">Contact for partnerships</a>` : "";
+const avatar = P.pic ? `<img class="avatar" src="${esc(P.pic)}" alt="" referrerpolicy="no-referrer">` : `<div class="avatar">${esc((P.name || P.username || "?")[0])}</div>`;
+
+let html = `
+<section class="hero">
+  <div class="count glass"><span class="px"></span>
+    <div class="n">${fmt(followers)}</div><div class="l">followers on Instagram</div>
+    <div class="stripes short" style="margin-top:22px"></div></div>
+  <div class="id glass">
+    <h1>${esc(P.name || P.username)}</h1>
+    <div class="stripes" style="margin-top:14px"></div>
+    <div class="row"><span class="handle">@${esc(P.username)}</span>${avatar}</div>
+    ${(D.tagline || P.bio) ? `<div class="bio">${esc(D.tagline || P.bio)}</div>` : ""}
+    ${contact}
+  </div>
+</section>
+<div class="script">media kit</div>
+<section class="board glass">
+  <div><div class="v">${fmt(avg(mains))}</div><div class="k">Average ${MAIN_LABEL} per reel</div></div>
+  ${engs.length ? `<div><div class="v">${pct(avg(engs))}</div><div class="k">Engagement rate</div></div>`
+               : `<div><div class="v">${R.length}</div><div class="k">Reels published</div></div>`}
+  <div><div class="v">${fmt(total)}</div><div class="k">Total ${MAIN_LABEL} across reels</div></div>
+  <div><div class="v">${(R.length / months).toFixed(1)}</div><div class="k">Reels per month</div></div>
+</section>`;
+
+// Audience
+const demo = D.demographics, keys = Object.keys(demo);
+if (keys.length) {
+  const COUNTRY = { US: "United States", CA: "Canada", GB: "United Kingdom", AU: "Australia", MX: "Mexico", DE: "Germany", FR: "France", BR: "Brazil", IN: "India", KE: "Kenya" };
+  const bars = (obj, { sortByValue = true, top = 6, names = {} } = {}) => {
+    let rows = Object.entries(obj); const tot = rows.reduce((s, [, v]) => s + v, 0);
+    rows = sortByValue ? rows.sort((a, b) => b[1] - a[1]).slice(0, top) : rows.sort();
+    const peak = Math.max(...rows.map(r => r[1]));
+    return `<div class="glass panel bars">${rows.map(([k, v]) => `<div class="row"><span class="lbl">${esc((names[k] || k).split(",")[0])}</span>
+      <span class="track"><span class="fill" style="display:block;width:${(v / peak * 100).toFixed(1)}%"></span></span><span class="pct">${Math.round(v / tot * 100)}%</span></div>`).join("")}</div>`;
+  };
+  html += `<h2>Who's watching</h2><p class="lede">Follower breakdown reported by Instagram.</p><div class="cols"><div>`;
+  if (demo.age) html += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false });
+  if (demo.gender) {
+    const g = demo.gender, t = Object.values(g).reduce((s, x) => s + x, 0), m = (g.M || 0) / t, f = (g.F || 0) / t;
+    html += `<h3 style="margin-top:18px">Gender</h3><div class="glass panel"><div style="display:flex;height:8px;margin:6px 0 10px">
+      <span style="width:${m * 100}%;background:var(--sage)"></span><span style="width:${f * 100}%;background:var(--sand)"></span><span style="flex:1;background:var(--fern)"></span></div>
+      <div class="na" style="font-size:.92rem">Men ${Math.round(m * 100)}% &nbsp; Women ${Math.round(f * 100)}%</div></div>`;
+  }
+  html += `</div><div>`;
+  if (demo.city) html += `<h3>Top cities</h3>` + bars(demo.city);
+  if (demo.country) html += `<h3 style="margin-top:18px">Top countries</h3>` + bars(demo.country, { top: 5, names: COUNTRY });
+  html += `</div></div>`;
+}
+
+// Top reels
+const topReels = [...(recent.length >= 6 ? R.filter(r => (now - dt(r.posted)) / DAY <= 90) : R)]
+  .filter(r => val(r) != null).sort((a, b) => val(b) - val(a)).slice(0, 6);
+html += `<h2>Top reels</h2><p class="lede">Most-${HAS_VIEWS ? "viewed" : "liked"} reels${recent.length >= 6 ? " from the last 90 days" : ""}. Tap one for its numbers.</p>
+<div class="reels">${topReels.map((r, i) => `<button class="reel" onclick="openReel('${r.id}')">${thumb(r, i === 0 ? '<span class="badge">Top reel</span>' : "")}
+  <div class="card glass"><div class="meta"><div><b>${fmt(val(r))}</b><span>${MAIN_LABEL}</span></div>
+  ${r.total.engagement != null ? `<div style="text-align:right"><b>${pct(r.total.engagement)}</b><span>engagement</span></div>`
+                               : `<div style="text-align:right"><b>${fmt(r.total.comments)}</b><span>comments</span></div>`}</div>
+  <div class="t">${esc(r.title)}, ${fmtDate(r.posted, { month: "short", day: "numeric", year: "numeric" })}</div></div></button>`).join("")}</div>`;
+
+// Growth
+if (D.followers.length > 1) {
+  html += `<h2>Growth</h2><p class="lede">Follower count over time.</p><div class="glass panel">${lineChart(D.followers.map(f => [Date.parse(f.date), f.n]))}</div>`;
+}
+html += `<div class="foot">Numbers come directly from the Instagram API and update daily. Last updated ${esc(D.updated)}.</div>`;
+document.getElementById("app").innerHTML = html;
+</script>
+</body>
+</html>
