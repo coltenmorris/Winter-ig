@@ -6,10 +6,12 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+import flags as flags_mod
+
 from shared import LANE, MOSS, SAGE, NAVY, SAND, SPLIT, RULE, cfg, fmt_num, load, video_table
 
 media, snaps, acct, daily, demo, profile = load()
-t_all = video_table(media, snaps, window_days=30)
+t_all = flags_mod.ensure_tags(video_table(media, snaps, window_days=30))
 ads = t_all[t_all["is_ad"] == 1] if not t_all.empty else t_all          # brand partnerships portfolio
 t = t_all[(t_all["kind"] == "reel") & (t_all["is_ad"] == 0)] if not t_all.empty else t_all  # organic reels only
 

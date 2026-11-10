@@ -76,3 +76,22 @@ def set_trial(flags: dict, media_id: str, is_trial: bool) -> dict:
     (ids.add if is_trial else ids.discard)(media_id)
     flags["trial"] = sorted(ids)
     return flags
+
+
+def ensure_tags(df, id_col: str | None = None):
+    """Make sure a table has is_ad / brand / is_trial columns (ids in the index, or in id_col)."""
+    if df is None or df.empty:
+        for col, default in (("is_ad", 0), ("brand", ""), ("is_trial", 0)):
+            if df is not None and col not in df:
+                df[col] = default
+        return df
+    fl = load_flags()
+    ids = df[id_col] if id_col else df.index.to_series(index=df.index)
+    if "is_ad" not in df:
+        df["is_ad"] = ids.isin(list(fl["ads"])).astype(int).values
+    if "brand" not in df:
+        df["brand"] = [fl["ads"].get(i, {}).get("brand", "") for i in ids]
+    trial = ids.isin(fl["trial"]).astype(int).values
+    df["is_trial"] = (df["is_trial"].fillna(0).astype(int).values | trial) if "is_trial" in df else trial
+    df["brand"] = df["brand"].fillna("")
+    return df

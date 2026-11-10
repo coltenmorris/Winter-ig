@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 import db
+import flags as flags_mod
 from ig_client import InstagramError
 import html
 
@@ -28,7 +29,7 @@ with st.sidebar:
     st.caption("Instagram stats can lag up to 48 hours. On the hosted site, the daily GitHub sync is what saves history.")
 
 media, snaps, acct, daily, demo, profile = load()
-t = video_table(media, snaps, window)
+t = flags_mod.ensure_tags(video_table(media, snaps, window))
 t = t[t["kind"] == "reel"] if not t.empty else t  # analytics are reels only; the calendar covers posts too
 st.caption("Tip: open any reel and use Portfolio to tag it as an ad. Ads leave your organic stats on the media kit "
            "and appear under Brand partnerships.")

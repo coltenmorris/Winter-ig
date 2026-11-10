@@ -7,6 +7,8 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+import flags as flags_mod
+
 from shared import (BARK, DUSK, FERN, MOSS, SAGE, fmt_num, load, private_nav,
                     reel_dialog, require_password, video_table)
 
@@ -21,7 +23,7 @@ t = video_table(media, snaps)
 if t.empty:
     st.info("Nothing posted yet. Run the sync first.")
     st.stop()
-t = t.reset_index().rename(columns={"index": "id"})
+t = flags_mod.ensure_tags(t.reset_index().rename(columns={"index": "id"}), id_col="id")
 t["date"] = t["posted_at"].dt.date
 has_views = t["views"].notna().any()
 
