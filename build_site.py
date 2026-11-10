@@ -13,6 +13,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import db
+import flags as flags_mod
 
 ROOT = Path(__file__).parent
 SRC, OUT = ROOT / "site", ROOT / "docs"
@@ -50,6 +51,7 @@ def build():
     conn.row_factory = sqlite3.Row
     setting = lambda k: (conn.execute("SELECT value FROM settings WHERE key=?", (k,)).fetchone() or [None])[0]
 
+    fl = flags_mod.load_flags()
     reels = []
     for m in conn.execute("SELECT * FROM media ORDER BY posted_at DESC"):
         posted = datetime.fromisoformat(m["posted_at"].replace("+0000", "+00:00")).astimezone(TZ)
@@ -71,7 +73,8 @@ def build():
             "title": " ".join(w for w in caption.split("\n")[0].split() if not w.startswith("#"))[:70] or "Untitled",
             "tags": sorted({w[1:].lower().strip(".,!?") for w in caption.split() if w.startswith("#") and len(w) > 1}),
             "posted": posted.strftime("%Y-%m-%dT%H:%M"), "date": posted.strftime("%Y-%m-%d"),
-            "thumb": m["thumbnail_url"], "link": m["permalink"], "trial": bool(m["is_trial"]),
+            "thumb": m["thumbnail_url"], "link": m["permalink"], "trial": bool(m["is_trial"]) or m["id"] in fl["trial"],
+            "ad": m["id"] in fl["ads"], "brand": fl["ads"].get(m["id"], {}).get("brand", ""),
             "kind": db.media_kind(m["media_type"], m["product_type"]), "media_type": m["media_type"],
             "h24": at(1, 1), "week": at(7, 2), "total": stats(snaps[-1]),
             "series": [[age, s["views"] if s["views"] is not None else s["likes"]] for age, s in aged],

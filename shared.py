@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 import db
+import flags as flags_mod
 
 LOCAL_TZ = "America/New_York"
 
@@ -38,8 +39,9 @@ def cfg(key: str, default: str = "") -> str:
 
 # ---------------- data ----------------
 def load():
-    # Re-read whenever the database file changes (e.g. after the daily sync is pulled in).
-    return _load(db.DB_PATH.stat().st_mtime if db.DB_PATH.exists() else 0)
+    # Re-read whenever the database or the tag file changes.
+    mt = lambda p: p.stat().st_mtime if p.exists() else 0
+    return _load(mt(db.DB_PATH) + mt(flags_mod.FLAGS_PATH))
 
 
 @st.cache_data(ttl=300)
@@ -57,6 +59,10 @@ def _load(_mtime: float):
         df["captured_date"] = pd.to_datetime(df["captured_date"])
     snaps = clean_snaps(snaps)
     media["posted_at"] = pd.to_datetime(media["posted_at"], utc=True).dt.tz_convert(LOCAL_TZ).dt.tz_localize(None)
+    fl = flags_mod.load_flags()
+    media["is_trial"] = media["id"].isin(fl["trial"]).astype(int) | media["is_trial"].fillna(0).astype(int)
+    media["is_ad"] = media["id"].isin(list(fl["ads"])).astype(int)
+    media["brand"] = media["id"].map(lambda i: fl["ads"].get(i, {}).get("brand", ""))
     return media, snaps, acct, daily, demo, profile
 
 
@@ -339,7 +345,7 @@ def _cell(row, key):
     return fmt_num(row[key])
 
 
-@st.dialog("Reel analytics", width="large")
+@st.dialog("Analytics", width="large")
 def reel_dialog(media_id: str):
     media, snaps, *_ = load()
     m = media.set_index("id").loc[media_id]
@@ -373,9 +379,20 @@ def reel_dialog(media_id: str):
         ).properties(height=200)
         st.altair_chart(line, width="stretch")
 
-    trial = st.checkbox("Posted as a trial reel", value=bool(m["is_trial"]), key=f"trial_{media_id}")
-    if trial != bool(m["is_trial"]):
-        conn = db.connect()
-        db.set_trial(conn, media_id, trial)
-        conn.close()
+    st.markdown("### Portfolio")
+    is_ad = st.checkbox("This is an ad or sponsored post", value=bool(m["is_ad"]), key=f"ad_{media_id}",
+                        help="Ads move out of your organic stats and into the Brand partnerships section of the media kit.")
+    brand = st.text_input("Brand (optional)", value=m["brand"] or "", key=f"brand_{media_id}",
+                          placeholder="e.g. Nike", disabled=not is_ad)
+    is_reel = db.media_kind(m["media_type"], m["product_type"]) == "reel"
+    trial = st.checkbox("Posted as a trial reel", value=bool(m["is_trial"]), key=f"trial_{media_id}") if is_reel else False
+    changed = (is_ad != bool(m["is_ad"]) or (is_ad and brand.strip() != (m["brand"] or ""))
+               or (is_reel and trial != bool(m["is_trial"])))
+    if st.button("Save", key=f"save_{media_id}", disabled=not changed, type="primary"):
+        fl = flags_mod.load_flags()
+        flags_mod.set_ad(fl, media_id, is_ad, brand)
+        if is_reel:
+            flags_mod.set_trial(fl, media_id, trial)
+        ok, note = flags_mod.save_flags(fl, f"Update tags for {media_id}")
         st.cache_data.clear()
+        (st.success if ok else st.warning)(note)

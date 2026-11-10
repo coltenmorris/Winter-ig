@@ -30,6 +30,8 @@ with st.sidebar:
 media, snaps, acct, daily, demo, profile = load()
 t = video_table(media, snaps, window)
 t = t[t["kind"] == "reel"] if not t.empty else t  # analytics are reels only; the calendar covers posts too
+st.caption("Tip: open any reel and use Portfolio to tag it as an ad. Ads leave your organic stats on the media kit "
+           "and appear under Brand partnerships.")
 st.header("Creator analytics")
 if t.empty:
     st.info("No data yet. Run the sync first.")
@@ -121,24 +123,32 @@ st.altair_chart(heat, width="stretch")
 
 # ---------------- what works ----------------
 st.markdown("## What your audience responds to")
-st.markdown('<p class="lede">Average views per reel for each hashtag you’ve used at least twice, '
+st.markdown('<p class="lede">Your top 3 hashtags by average views per reel (used at least twice), '
             'compared with your overall average (the line).</p>', unsafe_allow_html=True)
 tags = settled.explode("hashtags").dropna(subset=["hashtags"])
 if not tags.empty:
     tg = (tags.groupby("hashtags").agg(avg_views=("views", "mean"), reels=("views", "size"),
                                       engagement=("engagement_rate", "mean"))
-          .query("reels >= 2").sort_values("avg_views", ascending=False).head(12).reset_index())
+          .query("reels >= 2").sort_values("avg_views", ascending=False).reset_index())
     tg["hashtags"] = "#" + tg["hashtags"]
     avg_all = settled["views"].mean()
-    bars = alt.Chart(tg).mark_bar(color=SAGE).encode(
-        x=alt.X("avg_views:Q", title="Average views", axis=alt.Axis(format="~s")),
-        y=alt.Y("hashtags:N", sort="-x", title=None, axis=alt.Axis(labelOverlap=False, labelFontSize=13)),
-        color=alt.condition(alt.datum.avg_views > avg_all, alt.value(MOSS), alt.value(SAGE)),
-        tooltip=["hashtags", alt.Tooltip("avg_views:Q", format=",.0f"), "reels",
-                 alt.Tooltip("engagement:Q", format=".1%")],
-    )
-    rule = alt.Chart(pd.DataFrame({"x": [avg_all]})).mark_rule(color=DUSK, strokeDash=[4, 4]).encode(x="x:Q")
-    st.altair_chart((bars + rule).properties(height=max(200, 34 * len(tg))), width="stretch")
+    xmax = tg["avg_views"].max() * 1.05 if not tg.empty else 1
+
+    def tag_chart(df):
+        bars = alt.Chart(df).mark_bar(color=SAGE).encode(
+            x=alt.X("avg_views:Q", title="Average views", axis=alt.Axis(format="~s"), scale=alt.Scale(domain=[0, xmax])),
+            y=alt.Y("hashtags:N", sort="-x", title=None, axis=alt.Axis(labelOverlap=False, labelFontSize=13)),
+            color=alt.condition(alt.datum.avg_views > avg_all, alt.value(MOSS), alt.value(SAGE)),
+            tooltip=["hashtags", alt.Tooltip("avg_views:Q", format=",.0f"), "reels",
+                     alt.Tooltip("engagement:Q", format=".1%")],
+        )
+        rule = alt.Chart(pd.DataFrame({"x": [avg_all]})).mark_rule(color=DUSK, strokeDash=[4, 4]).encode(x="x:Q")
+        return (bars + rule).properties(height=max(120, 38 * len(df)))
+
+    st.altair_chart(tag_chart(tg.head(3)), width="stretch")
+    if len(tg) > 3:
+        with st.expander(f"Show all {len(tg)} hashtags"):
+            st.altair_chart(tag_chart(tg.iloc[3:]), width="stretch")
 else:
     st.caption("Add hashtags to your captions to see which topics pull the most views.")
 
@@ -205,7 +215,8 @@ rows = ['<div class="rl head"><span>Reel</span><span class="n">Views</span>'
         f'<span class="n">+{window}d</span><span class="n hide-sm">Engagement</span>'
         '<span class="n hide-sm">Watch</span></div>']
 for i, r in order.head(60).iterrows():
-    trial = '<span class="trial">Trial</span>' if r["is_trial"] else ""
+    trial = ('<span class="trial">Trial</span>' if r["is_trial"] else "") + \
+        (f'<span class="trial">Ad{": " + html.escape(r["brand"]) if r["brand"] else ""}</span>' if r["is_ad"] else "")
     watch = f"{r['avg_watch_s']:.1f}s" if pd.notna(r["avg_watch_s"]) else ""
     rows.append(f'<div class="rl"><span class="t">{html.escape(r["title"])}{trial}'
                 f'<small>{r["posted_at"]:%b %-d, %-I:%M %p}</small></span>'

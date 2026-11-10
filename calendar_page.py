@@ -152,7 +152,7 @@ for _, r in rt.iterrows():
              else f"<b>{fmt_num(r['likes'])}</b> likes &nbsp; <b>{fmt_num(r['comments'])}</b> comments")
     what = "Reel" if r["kind"] == "reel" else ("Carousel" if r["media_type"] == "CAROUSEL_ALBUM" else "Photo")
     st.markdown(f"""<div class="daycard glass">{img}<div>
-        <div class="when">{what}, {r['posted_at']:%a %b %-d, %Y at %-I:%M %p}{', trial reel' if r['is_trial'] else ''}</div>
+        <div class="when">{what}, {r['posted_at']:%a %b %-d, %Y at %-I:%M %p}{', trial reel' if r['is_trial'] else ''}{(', ad for ' + html.escape(r['brand']) if r['brand'] else ', ad') if r['is_ad'] else ''}</div>
         <div class="cap">{html.escape(r['caption'] or 'No caption')}</div>
         <div class="stats">{stats}</div></div></div>""", unsafe_allow_html=True)
     if st.button("View analytics", key=f"open_{r['id']}"):

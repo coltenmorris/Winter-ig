@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "17 12 * * *"   # every day around 7am Eastern
   workflow_dispatch:         # lets you run it anytime from the Actions tab
+  push:
+    branches: [main]
+    paths: [flags.json]      # rebuild the site when you tag an ad or trial reel
 
 permissions:
   contents: write

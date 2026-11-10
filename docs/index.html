@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Media Kit</title>
 <meta name="description" content="Instagram creator media kit with audience and performance stats.">
-<link rel="stylesheet" href="style.css?v=202611101946">
+<link rel="stylesheet" href="style.css?v=202611101958">
 </head>
 <body>
 <div class="wrap">
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
   <main id="app"></main>
 </div>
-<script src="data.js?v=202611101946"></script>
-<script src="common.js?v=202611101946"></script>
+<script src="data.js?v=202611101958"></script>
+<script src="common.js?v=202611101958"></script>
 <script>
 mark("kit");
-const P = D.profile, R = D.reels.filter(r => r.kind !== "post");
+const P = D.profile, R = D.reels.filter(r => r.kind !== "post" && !r.ad), ADS = D.reels.filter(r => r.ad);
 const now = Date.now(), DAY = 864e5;
 const followers = D.followers.length ? D.followers[D.followers.length - 1].n : null;
 const recent = R.filter(r => (now - dt(r.posted)) / DAY <= 90 && (now - dt(r.posted)) / DAY >= 3);
@@ -87,6 +87,24 @@ html += `<h2>Top reels</h2><p class="lede">Most-${HAS_VIEWS ? "viewed" : "liked"
   ${r.total.engagement != null ? `<div style="text-align:right"><b>${pct(r.total.engagement)}</b><span>engagement</span></div>`
                                : `<div style="text-align:right"><b>${fmt(r.total.comments)}</b><span>comments</span></div>`}</div>
   <div class="t">${esc(r.title)}, ${fmtDate(r.posted, { month: "short", day: "numeric", year: "numeric" })}</div></div></button>`).join("")}</div>`;
+
+// Brand partnerships
+if (ADS.length) {
+  const aVals = ADS.map(r => val(r)).filter(v => v != null), aAvg = avg(aVals), oAvg = avg(R.map(r => val(r)).filter(v => v != null));
+  const aEng = avg(ADS.map(r => r.total.engagement).filter(v => v != null));
+  const brands = [...new Set(ADS.map(r => r.brand).filter(Boolean))];
+  html += `<h2>Brand partnerships</h2><p class="lede">Sponsored posts and reels${brands.length ? " for " + brands.map(esc).join(", ") : ""}, and how they typically perform.</p>
+  <section class="board glass" style="margin-top:8px">
+    <div><div class="v">${ADS.length}</div><div class="k">Sponsored ${ADS.length === 1 ? "post" : "posts"}</div></div>
+    <div><div class="v">${fmt(aAvg)}</div><div class="k">Average ${MAIN_LABEL} per ad</div>${oAvg ? `<div class="k" style="color:var(--fern);margin-top:4px">${aAvg >= oAvg ? "+" : ""}${Math.round((aAvg / oAvg - 1) * 100)}% vs. a typical reel</div>` : ""}</div>
+    <div><div class="v">${aEng != null ? pct(aEng) : "n/a"}</div><div class="k">Average engagement on ads</div></div>
+    <div><div class="v">${fmt(aVals.reduce((s, x) => s + x, 0))}</div><div class="k">Total ${MAIN_LABEL} delivered</div></div>
+  </section>
+  <div class="reels" style="margin-top:22px">${[...ADS].sort((a, b) => b.posted.localeCompare(a.posted)).map(r => `<button class="reel" onclick="openReel('${r.id}')">${thumb(r, r.brand ? `<span class="badge">${esc(r.brand)}</span>` : "")}
+    <div class="card glass"><div class="meta"><div><b>${fmt(val(r))}</b><span>${MAIN_LABEL}</span></div>
+    <div style="text-align:right"><b>${r.total.engagement != null ? pct(r.total.engagement) : "n/a"}</b><span>engagement</span></div></div>
+    <div class="t">${esc(r.title)}, ${fmtDate(r.posted, { month: "short", day: "numeric", year: "numeric" })}</div></div></button>`).join("")}</div>`;
+}
 
 // Growth
 if (D.followers.length > 1) {

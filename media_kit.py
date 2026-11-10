@@ -9,8 +9,9 @@ import streamlit as st
 from shared import LANE, MOSS, SAGE, NAVY, SAND, SPLIT, RULE, cfg, fmt_num, load, video_table
 
 media, snaps, acct, daily, demo, profile = load()
-t = video_table(media, snaps, window_days=30)
-t = t[t["kind"] == "reel"] if not t.empty else t  # media kit stats are reels only
+t_all = video_table(media, snaps, window_days=30)
+ads = t_all[t_all["is_ad"] == 1] if not t_all.empty else t_all          # brand partnerships portfolio
+t = t_all[(t_all["kind"] == "reel") & (t_all["is_ad"] == 0)] if not t_all.empty else t_all  # organic reels only
 
 if t.empty or acct.empty:
     st.header("Media kit")
@@ -159,6 +160,38 @@ for i, (_, r) in enumerate(top.iterrows()):
   <div class="t">{caption}</div></div>
 </a>""")
 st.markdown('<div class="reels">' + "".join(cards) + "</div>", unsafe_allow_html=True)
+
+# ---------------- brand partnerships ----------------
+if not ads.empty:
+    st.markdown("## Brand partnerships")
+    ad_main = "views" if ads["views"].notna().any() else "likes"
+    a_avg, o_avg = ads[ad_main].mean(), t[ad_main].mean() if not t.empty else None
+    a_eng = ads["engagement_rate"].mean()
+    vs = (f"{(a_avg / o_avg - 1):+.0%} vs. a typical reel" if o_avg and a_avg == a_avg else "")
+    brands = sorted({b for b in ads["brand"] if b})
+    st.markdown(f'<p class="lede">Sponsored posts and reels{" for " + ", ".join(esc(b) for b in brands) if brands else ""}, '
+                f'and how they typically perform.</p>', unsafe_allow_html=True)
+    st.markdown(f"""<div class="board glass" style="margin-top:8px">
+      <div><div class="v">{len(ads)}</div><div class="k">Sponsored {"post" if len(ads) == 1 else "posts"}</div></div>
+      <div><div class="v">{fmt_num(a_avg)}</div><div class="k">Average {ad_main} per ad</div><div class="d">{vs}</div></div>
+      <div><div class="v">{f"{a_eng:.1%}" if a_eng == a_eng else "n/a"}</div><div class="k">Average engagement on ads</div></div>
+      <div><div class="v">{fmt_num(ads[ad_main].sum())}</div><div class="k">Total {ad_main} delivered</div></div>
+    </div>""", unsafe_allow_html=True)
+    acards = []
+    for _, r in ads.sort_values("posted_at", ascending=False).iterrows():
+        has_img = isinstance(r["thumbnail_url"], str) and bool(r["thumbnail_url"])
+        thumb = (f'<img src="{esc(r["thumbnail_url"])}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">'
+                 if has_img else f'<div class="ph">{esc(r["title"])}</div>')
+        badge = f'<span class="best">{esc(r["brand"])}</span>' if r["brand"] else ""
+        eng = f"{r['engagement_rate']:.1%}" if pd.notna(r["engagement_rate"]) else "n/a"
+        acards.append(f"""
+<a class="reel" href="{esc(r['permalink'] or '#')}" target="_blank" rel="noopener">
+  <div class="thumb">{thumb}{badge}</div>
+  <div class="card glass"><div class="meta"><div><b>{fmt_num(r[ad_main])}</b><span>{ad_main}</span></div>
+       <div style="text-align:right"><b>{eng}</b><span>engagement</span></div></div>
+  <div class="t">{esc(r['title'])}, {r['posted_at']:%b %-d, %Y}</div></div>
+</a>""")
+    st.markdown('<div class="reels" style="margin-top:22px">' + "".join(acards) + "</div>", unsafe_allow_html=True)
 
 # ---------------- growth ----------------
 st.markdown("## Growth")

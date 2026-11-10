@@ -199,7 +199,7 @@ function renderRange() {
     <span><b>${list.length ? fmt(tot / list.length) : 0}</b>${MAIN_LABEL} each on average</span>`;
   $("rlist").innerHTML = list.length ? list.map(r => `
     <button class="daycard" onclick="openReel('${r.id}')">${thumb(r)}<div>
-      <div class="when">${what(r)}, ${fmtDate(r.posted, { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at ${fmtTime(r.posted)}${r.trial ? ", trial reel" : ""}</div>
+      <div class="when">${what(r)}, ${fmtDate(r.posted, { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at ${fmtTime(r.posted)}${r.trial ? ", trial reel" : ""}${r.ad ? (r.brand ? ", ad for " + esc(r.brand) : ", ad") : ""}</div>
       <div class="cap">${esc(r.caption || "No caption")}</div>
       <div class="st"><b>${fmt(val(r))}</b> ${MAIN_LABEL}${r.total.engagement != null ? ` &nbsp; <b>${pct(r.total.engagement)}</b> engagement` : ` &nbsp; <b>${fmt(r.total.comments)}</b> comments`}</div>
       <div class="go">View analytics</div></div></button>`).join("") : `<p class="lede">No ${NOUN[kind]} in this range.</p>`;
@@ -242,16 +242,19 @@ $("wk").innerHTML = `<div class="wk"><span></span>${dows.map(d => `<span class="
 // ---------- hashtags ----------
 const agg = {}; settled.forEach(r => r.tags.forEach(t => (agg[t] ||= []).push(val(r))));
 const overall = avg(settled.map(r => val(r)));
-const rows = Object.entries(agg).filter(([, v]) => v.length >= 2).map(([t, v]) => [t, avg(v), v.length]).sort((a, b) => b[1] - a[1]).slice(0, 12);
-$("tglede").textContent = `Average ${MAIN_LABEL} per reel for hashtags you've used at least twice. Your overall average is ${fmt(overall)}; brighter bars beat it.`;
+const rows = Object.entries(agg).filter(([, v]) => v.length >= 2).map(([t, v]) => [t, avg(v), v.length]).sort((a, b) => b[1] - a[1]);
+$("tglede").textContent = `Your top 3 hashtags by average ${MAIN_LABEL} per reel (used at least twice). Your overall average is ${fmt(overall)}; brighter bars beat it.`;
 const peak = Math.max(...rows.map(r => r[1]), 1);
-$("tags").innerHTML = rows.length ? rows.map(([t, a, n]) => `<div class="row"><span class="lbl">#${esc(t)}</span>
+const tagRow = ([t, a, n]) => `<div class="row"><span class="lbl">#${esc(t)}</span>
   <span class="track"><span class="fill" style="display:block;width:${(a / peak * 100).toFixed(1)}%;${a < overall ? "background:var(--moss)" : ""}"></span></span>
-  <span class="pct">${fmt(a)}</span></div>`).join("") : `<p class="lede">Use hashtags on a few reels to compare topics.</p>`;
+  <span class="pct">${fmt(a)}</span></div>`;
+$("tags").innerHTML = rows.length ? rows.slice(0, 3).map(tagRow).join("") +
+  (rows.length > 3 ? `<details class="more"><summary>Show all ${rows.length} hashtags</summary>${rows.slice(3).map(tagRow).join("")}</details>` : "")
+  : `<p class="lede">Use hashtags on a few reels to compare topics.</p>`;
 
 // ---------- all reels ----------
 $("list").innerHTML = `<div class="rl head"><span>Reel</span><span class="n">${HAS_VIEWS ? "Views" : "Likes"}</span><span class="n">${HAS_VIEWS ? "Engagement" : "Comments"}</span><span class="n hide-sm">${HAS_VIEWS ? "Watch" : "Shares"}</span></div>` +
-  R.map(r => `<button class="rl" onclick="openReel('${r.id}')"><span class="t">${esc(r.title)}${r.trial ? '<span class="tag">Trial</span>' : ""}
+  R.map(r => `<button class="rl" onclick="openReel('${r.id}')"><span class="t">${esc(r.title)}${r.trial ? '<span class="tag">Trial</span>' : ""}${r.ad ? `<span class="tag">Ad${r.brand ? ": " + esc(r.brand) : ""}</span>` : ""}
     <small>${fmtDate(r.posted, { month: "short", day: "numeric", year: "numeric" })}, ${fmtTime(r.posted)}</small></span>
     <span class="n">${fmt(val(r))}</span><span class="n">${HAS_VIEWS ? pct(r.total.engagement) : fmt(r.total.comments)}</span>
     <span class="n hide-sm">${HAS_VIEWS ? (r.total.watch_s != null ? r.total.watch_s + "s" : "n/a") : fmt(r.total.shares)}</span></button>`).join("");
