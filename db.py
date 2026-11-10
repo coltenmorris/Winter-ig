@@ -27,6 +27,14 @@ CREATE TABLE IF NOT EXISTS account_snapshots (
     captured_date TEXT PRIMARY KEY,
     username TEXT, followers INTEGER, following INTEGER, media_count INTEGER
 );
+CREATE TABLE IF NOT EXISTS account_daily (
+    captured_date TEXT PRIMARY KEY,
+    reach INTEGER, views INTEGER, accounts_engaged INTEGER, total_interactions INTEGER
+);
+CREATE TABLE IF NOT EXISTS demographics (
+    breakdown TEXT, label TEXT, value INTEGER, captured_date TEXT,
+    PRIMARY KEY (breakdown, label)
+);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 """
 
@@ -82,3 +90,29 @@ def upsert_account(conn, date: str, me: dict):
 def set_trial(conn, media_id: str, is_trial: bool):
     conn.execute("UPDATE media SET is_trial=? WHERE id=?", (1 if is_trial else 0, media_id))
     conn.commit()
+
+
+def upsert_account_daily(conn, date: str, d: dict):
+    if not d:
+        return
+    conn.execute(
+        "INSERT OR REPLACE INTO account_daily VALUES (?,?,?,?,?)",
+        (date, d.get("reach"), d.get("views"), d.get("accounts_engaged"), d.get("total_interactions")),
+    )
+
+
+def replace_demographics(conn, date: str, demo: dict):
+    for breakdown, rows in demo.items():
+        if not rows:
+            continue
+        conn.execute("DELETE FROM demographics WHERE breakdown=?", (breakdown,))
+        conn.executemany(
+            "INSERT INTO demographics VALUES (?,?,?,?)",
+            [(breakdown, k, int(v), date) for k, v in rows.items()],
+        )
+
+
+def save_profile(conn, me: dict):
+    for k in ("username", "name", "biography", "profile_picture_url"):
+        if me.get(k):
+            set_setting(conn, f"profile_{k}", me[k])

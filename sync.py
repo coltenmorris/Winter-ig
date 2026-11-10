@@ -68,6 +68,10 @@ def run_sync(log=print, include_photos: bool = False) -> int:
 
     me = client.me()
     db.upsert_account(conn, today, me)
+    db.save_profile(conn, me)
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    db.upsert_account_daily(conn, yesterday, client.account_daily())
+    db.replace_demographics(conn, today, client.demographics())
     log(f"Connected as @{me.get('username')} ({me.get('followers_count')} followers)")
 
     media = client.list_media()
@@ -90,45 +94,66 @@ def run_sync(log=print, include_photos: bool = False) -> int:
     return len(videos)
 
 
-def seed_demo(days: int = 30, n_videos: int = 12):
+def seed_demo(days: int = 75, n_videos: int = 28):
     """Fake data so you can see the dashboard before connecting a real account."""
     conn = db.connect()
     rng = random.Random(7)
     start = date.today() - timedelta(days=days)
-    topics = ["Long run day", "Race recap", "Track workout", "Morning routine", "Shoe review",
-              "Tempo run", "Recovery tips", "Gym session", "Trail run", "Q&A", "Day in the life",
-              "Pre-race nerves"]
+    ideas = [
+        ("Sub-5 mile attempt #running #mile", 2.2), ("What I eat before a race #runnerfood", 1.4),
+        ("Track workout breakdown #trackworkout #running", 1.6), ("Shoe review: daily trainers #runningshoes", 1.1),
+        ("Morning long run vlog #longrun", 0.9), ("D1 cross country memories #xc #ncaa", 1.8),
+        ("Recovery routine #recovery", 0.8), ("Race day POV #raceday #running", 2.5),
+        ("Easy run pace explained #runningtips", 1.3), ("Gym session for runners #strength", 0.9),
+        ("Trail run sunrise #trailrunning", 1.0), ("Q&A: how I got faster #runningtips", 1.5),
+    ]
     for v in range(n_videos):
-        posted = start + timedelta(days=rng.randint(0, days - 3))
+        posted = start + timedelta(days=int(v * (days - 3) / n_videos) + rng.randint(0, 2))
+        hour = rng.choice([7, 8, 12, 17, 18, 19, 20, 21])
+        cap, boost = ideas[v % len(ideas)]
         mid = f"demo_{v}"
         db.upsert_media(conn, {
-            "id": mid, "caption": topics[v % len(topics)], "media_type": "VIDEO",
-            "media_product_type": "REELS", "timestamp": f"{posted}T15:00:00+0000",
+            "id": mid, "caption": cap, "media_type": "VIDEO", "media_product_type": "REELS",
+            "timestamp": (datetime(posted.year, posted.month, posted.day, hour) + timedelta(hours=5)).strftime("%Y-%m-%dT%H:%M:%S+0000"),
             "permalink": "https://www.instagram.com/", "thumbnail_url": None,
         })
-        if v in (2, 7):
+        if v % 6 == 4:
             db.set_trial(conn, mid, True)
-        ceiling = rng.choice([800, 2500, 6000, 20000])
-        views = 0
+        ceiling = rng.uniform(1500, 9000) * boost * (1.4 if hour >= 17 else 1.0) * (1 + v / n_videos)
         d = posted
         while d <= date.today():
             age = (d - posted).days + 1
-            views = int(ceiling * (1 - 0.6 ** age) * rng.uniform(0.97, 1.03))
-            likes = int(views * rng.uniform(0.04, 0.09))
+            views = int(ceiling * (1 - 0.55 ** age))
+            likes = int(views * rng.uniform(0.05, 0.1))
             db.upsert_snapshot(conn, mid, d.isoformat(), {
-                "views": views, "reach": int(views * 0.8), "likes": likes,
-                "comments": int(likes * 0.08), "shares": int(likes * 0.12),
-                "saved": int(likes * 0.1), "total_interactions": int(likes * 1.3),
-                "ig_reels_avg_watch_time": rng.uniform(3500, 9000),
-                "reels_skip_rate": rng.uniform(0.25, 0.6),
+                "views": views, "reach": int(views * 0.78), "likes": likes,
+                "comments": int(likes * 0.07), "shares": int(likes * 0.15),
+                "saved": int(likes * 0.12), "total_interactions": int(likes * 1.35),
+                "ig_reels_avg_watch_time": rng.uniform(4000, 11000),
+                "reels_skip_rate": rng.uniform(0.22, 0.55),
             })
             d += timedelta(days=1)
+    followers = 2400
     for i in range(days + 1):
         d = start + timedelta(days=i)
+        followers += rng.randint(3, 22)
         db.upsert_account(conn, d.isoformat(), {
-            "username": "demo_account", "followers_count": 1200 + i * rng.randint(2, 9),
-            "follows_count": 400, "media_count": 80 + i // 3,
+            "username": "colten.runs", "followers_count": followers,
+            "follows_count": 410, "media_count": 120 + i // 3,
         })
+        db.upsert_account_daily(conn, d.isoformat(), {
+            "reach": rng.randint(2500, 9000), "views": rng.randint(5000, 16000),
+            "accounts_engaged": rng.randint(300, 900), "total_interactions": rng.randint(500, 1500),
+        })
+    db.replace_demographics(conn, date.today().isoformat(), {
+        "age": {"13-17": 120, "18-24": 1210, "25-34": 980, "35-44": 410, "45-54": 160, "55-64": 60, "65+": 20},
+        "gender": {"M": 1690, "F": 1210, "U": 60},
+        "country": {"US": 2150, "CA": 180, "GB": 140, "AU": 95, "KE": 60, "MX": 45},
+        "city": {"Minneapolis, Minnesota": 420, "Miami, Florida": 310, "Pittsburgh, Pennsylvania": 280,
+                 "New York, New York": 190, "Chicago, Illinois": 150, "Los Angeles, California": 120},
+    })
+    db.save_profile(conn, {"username": "colten.runs", "name": "Colten Morris",
+                           "biography": "D1 runner sharing training, racing and recovery."})
     conn.commit()
     print(f"Demo data written to {db.DB_PATH}")
 

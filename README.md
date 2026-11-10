@@ -1,4 +1,11 @@
-# Instagram Video Analytics
+# Instagram Media Kit & Analytics
+
+Two pages in one app:
+
+- **Media kit** (the main link): a polished page for brands with your follower count,
+  average views, engagement rate, audience demographics, top reels and growth.
+- **Creator analytics** (add `/creator` to the link): private insights on when to post,
+  which topics pull views, hook strength, early velocity and trial reels.
 
 A local dashboard that pulls your Instagram video stats (views, reach, likes, comments,
 shares, saves, watch time, skip rate) into a database every day and charts the trends.
@@ -18,8 +25,14 @@ shares, saves, watch time, skip rate) into a database every day and charts the t
 **Dashboard (Streamlit Community Cloud)**
 1. Sign in at share.streamlit.io with GitHub → **Create app** → pick this repo,
    branch `main`, file `app.py` → **Deploy**.
-2. Optional: in the app's **Settings → Secrets**, add `IG_ACCESS_TOKEN = "your token"`
-   so the **Sync now** button works there too.
+2. In the app's **Settings → Secrets**, paste:
+   ```
+   CONTACT_EMAIL = "you@example.com"       # shows a "Contact for partnerships" button
+   DASHBOARD_PASSWORD = "pick-a-password"  # protects the /creator page
+   CREATOR_TAGLINE = "One line about your content"   # optional, overrides your IG bio
+   CREATOR_NAME = "Your Name"                        # optional
+   IG_ACCESS_TOKEN = "your token"          # optional, makes Sync now work on the site
+   ```
 
 Keep the repo **private**, since your stats are committed to it.
 

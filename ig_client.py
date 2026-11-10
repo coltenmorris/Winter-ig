@@ -54,9 +54,36 @@ class InstagramClient:
 
     # ---- account ----
     def me(self) -> dict:
-        return self._get("me", {
-            "fields": "user_id,username,account_type,followers_count,follows_count,media_count"
-        })
+        base = "user_id,username,account_type,followers_count,follows_count,media_count"
+        try:
+            return self._get("me", {"fields": base + ",name,biography,profile_picture_url"})
+        except InstagramError:
+            return self._get("me", {"fields": base})
+
+    def account_daily(self) -> dict:
+        """Yesterday's account-wide totals (reach, views, accounts engaged, interactions)."""
+        out = {}
+        for m in ["reach", "views", "accounts_engaged", "total_interactions"]:
+            try:
+                out.update(self._parse(self._get("me/insights", {
+                    "metric": m, "period": "day", "metric_type": "total_value"})))
+            except InstagramError:
+                pass
+        return out
+
+    def demographics(self) -> dict:
+        """Follower breakdowns by age, gender, country, city. Needs 100+ followers."""
+        out = {}
+        for b in ["age", "gender", "country", "city"]:
+            try:
+                resp = self._get("me/insights", {
+                    "metric": "follower_demographics", "period": "lifetime",
+                    "metric_type": "total_value", "timeframe": "this_month", "breakdown": b})
+                rows = resp["data"][0]["total_value"]["breakdowns"][0]["results"]
+                out[b] = {r["dimension_values"][0]: r["value"] for r in rows}
+            except (InstagramError, KeyError, IndexError):
+                pass
+        return out
 
     # ---- media ----
     def list_media(self, limit: int | None = None) -> list[dict]:
