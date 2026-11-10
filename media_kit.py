@@ -42,8 +42,7 @@ eng = recent["engagement_rate"].mean() if HAS_VIEWS else None
 d30 = daily[daily["captured_date"] > now - pd.Timedelta(days=30)]
 views_30 = d30["views"].sum() if d30["views"].notna().any() else t[MAIN].sum()
 v30_label = "Views in the last 30 days" if d30["views"].notna().any() else f"Total {MAIN_L} across reels"
-reels_per_week = len(t[t["age_days"] <= 90]) / (90 / 7)
-reels_per_month = len(t) / max(1, t["age_days"].max() / 30.4)
+best_reel = t[MAIN].max()
 
 # ---------------- hero ----------------
 avatar = (f'<img class="avatar" src="{esc(pic)}" alt="">' if pic
@@ -72,7 +71,7 @@ st.markdown(f"""
      else f'<div><div class="v">{len(t)}</div><div class="k">Reels published</div></div>'}
   <div><div class="v">{fmt_num(views_30)}</div><div class="k">{v30_label}</div></div>
   {f'<div><div class="v">+{fmt_num(gained)}</div><div class="k">New followers in 30 days</div><div class="d">{growth_pct:+.1%} growth</div></div>'
-     if len(acct) > 1 else f'<div><div class="v">{reels_per_month:.1f}</div><div class="k">Reels per month</div></div>'}
+     if len(acct) > 1 else f'<div><div class="v">{fmt_num(best_reel)}</div><div class="k">{MAIN_L.capitalize()} on top reel</div></div>'}
 </div>
 """, unsafe_allow_html=True)
 
@@ -151,8 +150,7 @@ st.markdown('<div class="reels">' + "".join(cards) + "</div>", unsafe_allow_html
 
 # ---------------- growth ----------------
 st.markdown("## Growth")
-st.markdown(f'<p class="lede">Posting about {reels_per_week:.1f} reels a week. '
-            f'Follower count and weekly views over time.</p>', unsafe_allow_html=True)
+st.markdown('<p class="lede">Follower count and weekly views over time.</p>', unsafe_allow_html=True)
 g1, g2 = st.columns(2, gap="large")
 with g1:
     st.markdown("### Followers")

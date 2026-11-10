@@ -230,6 +230,14 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 .summary {{ display:flex; flex-wrap:wrap; gap: 6px 32px; color:{STONE}; margin: 14px 0; }}
 .summary b {{ font-size:1.6rem; font-weight:700; letter-spacing:-.04em; color:{MIST}; margin-right:6px; }}
 
+/* Period summary */
+.ps {{ display:grid; grid-template-columns: minmax(0,1.6fr) repeat(5, minmax(0,1fr)); gap: 0 12px; align-items:center;
+       padding: 11px 16px; border-bottom: 1px solid {RULE_C}; font-variant-numeric: tabular-nums; }}
+.ps.head {{ color:{STONE}; font-size:.82rem; font-weight: 500; }}
+.ps .n {{ text-align:right; }}
+.ps small {{ display:block; color:{FERNB}; font-size:.78rem; }}
+.ps .na {{ color:{STONE}; }}
+
 /* Reel list */
 .rl {{ display:grid; grid-template-columns: 1fr repeat(4, 5.2rem); gap: 0 12px; align-items:center;
        padding: 12px 16px; border-bottom: 1px solid {RULE_C}; }}
@@ -248,6 +256,8 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
   .reels {{ grid-template-columns: repeat(2, minmax(0,1fr)); gap: 22px 12px; }}
   .bars .row {{ grid-template-columns: 7rem 1fr 2.8rem; }}
   .rl {{ grid-template-columns: 1fr 4.4rem 4.4rem; }}
+  .ps {{ grid-template-columns: minmax(0,1.5fr) repeat(3, minmax(0,1fr)); padding: 10px 12px; font-size: .88rem; }}
+  .ps .hide-sm {{ display:none; }}
   .rl .hide-sm {{ display:none; }}
   table.ms th, table.ms td {{ padding: 8px 3px; font-size:.82rem; }}
   table.ms td {{ font-size: .98rem; }}

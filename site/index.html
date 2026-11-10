@@ -26,7 +26,6 @@ const mains = pool.map(r => val(r)).filter(v => v != null);
 const engs = pool.map(r => r.total && r.total.engagement).filter(v => v != null);
 const total = R.map(r => val(r)).filter(v => v != null).reduce((s, x) => s + x, 0);
 const first = R.length ? dt(R[R.length - 1].posted) : new Date();
-const months = Math.max(1, (now - first) / (30.4 * DAY));
 const contact = D.contact ? `<a class="btn" href="mailto:${esc(D.contact)}?subject=${encodeURIComponent("Partnership with @" + P.username)}">Contact for partnerships</a>` : "";
 const avatar = P.pic ? `<img class="avatar" src="${esc(P.pic)}" alt="" referrerpolicy="no-referrer">` : `<div class="avatar">${esc((P.name || P.username || "?")[0])}</div>`;
 
@@ -49,7 +48,7 @@ let html = `
   ${engs.length ? `<div><div class="v">${pct(avg(engs))}</div><div class="k">Engagement rate</div></div>`
                : `<div><div class="v">${R.length}</div><div class="k">Reels published</div></div>`}
   <div><div class="v">${fmt(total)}</div><div class="k">Total ${MAIN_LABEL} across reels</div></div>
-  <div><div class="v">${(R.length / months).toFixed(1)}</div><div class="k">Reels per month</div></div>
+  <div><div class="v">${fmt(Math.max(...R.map(r => val(r) ?? 0)))}</div><div class="k">${MAIN_LABEL[0].toUpperCase() + MAIN_LABEL.slice(1)} on top reel</div></div>
 </section>`;
 
 // Audience

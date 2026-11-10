@@ -15,6 +15,14 @@
   <div id="warn"></div>
   <section class="kpis glass" id="kpis"></section>
 
+  <h2>Summary by period</h2>
+  <p class="lede">Videos grouped by when you posted them, with their views, likes and engagement to date. Followers come from the daily sync, so periods before tracking started show a dash.</p>
+  <div class="seg" role="group" aria-label="Breakdown" id="gran">
+    <button aria-pressed="true" data-g="month">Monthly</button><button aria-pressed="false" data-g="week">Weekly</button><button aria-pressed="false" data-g="day">Daily</button>
+  </div>
+  <div class="glass panel" id="pchart"></div>
+  <div class="glass" id="ptable"></div>
+
   <h2>Posting calendar</h2>
   <p class="lede">Each day shows how many videos you posted. Tap a day to list its videos, or pick a date range below.</p>
   <div class="controls one"><label class="f">Month<select id="month"></select></label></div>
@@ -67,6 +75,53 @@ $("kpis").innerHTML = `<div><div class="v">${fmt(fol)}</div><div class="k">Follo
   <div><div class="v">${fmt(avg(mains))}</div><div class="k">Avg ${MAIN_LABEL} per reel</div></div>
   <div><div class="v">${engs.length ? pct(avg(engs)) : fmt(avg(R.map(r => r.total.comments).filter(v => v != null)))}</div><div class="k">${engs.length ? "Avg engagement" : "Avg comments"}</div></div>
   <div><div class="v">${watch.length ? avg(watch).toFixed(1) + "s" : R.length}</div><div class="k">${watch.length ? "Avg watch time" : "Reels tracked"}</div></div>`;
+
+// ---------- period summary ----------
+const p2 = n => String(n).padStart(2, "0");
+function periodKey(dateStr, g) {
+  if (g === "month") return dateStr.slice(0, 7);
+  if (g === "day") return dateStr.slice(0, 10);
+  const d = new Date(dateStr.slice(0, 10) + "T12:00"); d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+}
+function periodLabel(k, g) {
+  if (g === "month") return new Date(k + "-15").toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  const d = new Date(k + "T12:00");
+  if (g === "week") return "Week of " + d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+}
+function renderSummary(g) {
+  const P = {};
+  R.forEach(r => { const k = periodKey(r.date, g), p = (P[k] ||= { videos: 0, views: 0, likes: 0, inter: 0 });
+    p.videos++; p.views += r.total.views || 0; p.likes += r.total.likes || 0; p.inter += r.total.interactions || 0; });
+  D.followers.forEach(f => { const k = periodKey(f.date, g); (P[k] ||= { videos: 0, views: 0, likes: 0, inter: 0 }).followers = f.n; });
+  let keys = Object.keys(P).sort().reverse().slice(0, { month: 24, week: 26, day: 45 }[g]);
+  const dash = `<span class="na">-</span>`;
+  const rows = keys.map((k, i) => {
+    const p = P[k], prev = keys.slice(i + 1).map(x => P[x].followers).find(v => v != null);
+    const fc = p.followers != null && prev != null && p.followers !== prev ? `<small>${p.followers - prev > 0 ? "+" : ""}${(p.followers - prev).toLocaleString()}</small>` : "";
+    return `<div class="ps"><span>${periodLabel(k, g)}</span><span class="n hide-sm">${p.videos}</span>
+      <span class="n">${HAS_VIEWS && p.videos ? fmt(p.views) : dash}</span><span class="n hide-sm">${p.videos ? fmt(p.likes) : dash}</span>
+      <span class="n">${p.views ? pct(p.inter / p.views) : dash}</span><span class="n">${p.followers != null ? fmt(p.followers) : dash}${fc}</span></div>`;
+  });
+  $("ptable").innerHTML = `<div class="ps head"><span>Period</span><span class="n hide-sm">Videos</span><span class="n">Views</span><span class="n hide-sm">Likes</span><span class="n">Engagement</span><span class="n">Followers</span></div>` + rows.join("");
+  // Bar chart of views (or likes) per period, oldest to newest
+  const pts = keys.filter(k => P[k].videos).reverse(), vals = pts.map(k => HAS_VIEWS ? P[k].views : P[k].likes);
+  const w = Math.max(340, Math.min(900, $("pchart").clientWidth - 40)), h = w < 500 ? 200 : 230, pad = { l: 44, r: 8, t: 10, b: 34 }, max = Math.max(...vals, 1), bw = (w - pad.l - pad.r) / Math.max(pts.length, 1);
+  const Y = v => h - pad.b - v / max * (h - pad.t - pad.b);
+  const every = Math.ceil(pts.length / (w < 500 ? 4 : 8));
+  $("pchart").innerHTML = pts.length ? `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="${MAIN_LABEL} per period">
+    ${[0, .5, 1].map(f => `<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(max * f)}" y2="${Y(max * f)}" stroke="rgba(211,219,207,.12)"/><text x="${pad.l - 6}" y="${Y(max * f) + 4}" text-anchor="end">${fmt(max * f)}</text>`).join("")}
+    ${pts.map((k, i) => `<rect x="${pad.l + i * bw + bw * .15}" y="${Y(vals[i])}" width="${bw * .7}" height="${h - pad.b - Y(vals[i])}" fill="${vals[i] === max ? "#E6D49C" : "#4E6A47"}"><title>${periodLabel(k, g)}: ${vals[i].toLocaleString()} ${MAIN_LABEL}</title></rect>
+      ${i % every === 0 ? `<text x="${pad.l + i * bw + bw / 2}" y="${h - 12}" text-anchor="middle">${g === "month" ? periodLabel(k, g) : new Date(k + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</text>` : ""}`).join("")}
+  </svg>` : `<p class="lede">No videos yet.</p>`;
+}
+$("gran").addEventListener("click", e => {
+  const b = e.target.closest("button[data-g]"); if (!b) return;
+  $("gran").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  renderSummary(b.dataset.g);
+});
+renderSummary("month");
 
 // ---------- calendar ----------
 const ym = d => d.slice(0, 7);

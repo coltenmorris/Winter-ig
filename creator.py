@@ -49,6 +49,57 @@ settled = t[t["age_days"] >= 3]  # ignore reels still collecting their first vie
 if settled.empty:
     settled = t
 
+# ---------------- period summary ----------------
+st.markdown("## Summary by period")
+st.markdown('<p class="lede">Videos grouped by when you posted them, with their views, likes and engagement to date. '
+            'Followers come from the daily sync, so periods before tracking started show a dash.</p>',
+            unsafe_allow_html=True)
+gran = st.segmented_control("Breakdown", ["Monthly", "Weekly", "Daily"], default="Monthly", key="gran") or "Monthly"
+freq = {"Monthly": "M", "Weekly": "W-SUN", "Daily": "D"}[gran]
+has_views_p = t["views"].notna().any()
+pt = t.assign(period=t["posted_at"].dt.to_period(freq))
+summ = pt.groupby("period").agg(videos=("views", "size"), views=("views", "sum"), likes=("likes", "sum"),
+                                inter=("total_interactions", "sum"))
+summ["eng"] = summ["inter"] / summ["views"].where(summ["views"] > 0)
+fol = acct.assign(period=acct["captured_date"].dt.to_period(freq)).groupby("period")["followers"].last()
+summ = summ.join(fol.rename("followers"), how="outer").sort_index(ascending=False)
+summ["fchange"] = summ["followers"] - summ["followers"].shift(-1)
+summ = summ.head({"Monthly": 24, "Weekly": 26, "Daily": 45}[gran])
+
+
+def plabel(p):
+    if gran == "Monthly":
+        return p.strftime("%b %Y")
+    if gran == "Weekly":
+        return "Week of " + p.start_time.strftime("%b %-d, %Y")
+    return p.start_time.strftime("%a, %b %-d, %Y")
+
+
+main_col = "views" if has_views_p else "likes"
+chart_df = summ.reset_index().assign(label=lambda d: d["period"].map(plabel)).iloc[::-1]
+bars = alt.Chart(chart_df.dropna(subset=["videos"])).mark_bar(color=SAGE).encode(
+    x=alt.X("label:N", sort=None, title=None, axis=alt.Axis(labelAngle=0 if gran == "Monthly" else -40, labelLimit=90)),
+    y=alt.Y(f"{main_col}:Q", title=main_col.capitalize(), axis=alt.Axis(format="~s")),
+    tooltip=[alt.Tooltip("label:N", title="Period"), alt.Tooltip(f"{main_col}:Q", format=","),
+             alt.Tooltip("videos:Q", title="Videos")],
+).properties(height=220)
+st.altair_chart(bars, width="stretch")
+
+dash = '<span class="na">-</span>'
+rows = ['<div class="ps head"><span>Period</span><span class="n hide-sm">Videos</span><span class="n">Views</span>'
+        '<span class="n hide-sm">Likes</span><span class="n">Engagement</span><span class="n">Followers</span></div>']
+for p, r in summ.iterrows():
+    eng_txt = f"{r['eng']:.1%}" if pd.notna(r["eng"]) else dash
+    fc = "" if pd.isna(r["fchange"]) or r["fchange"] == 0 else f'<small>{r["fchange"]:+,.0f}</small>'
+    rows.append(
+        f'<div class="ps"><span>{plabel(p)}</span>'
+        f'<span class="n hide-sm">{int(r["videos"]) if pd.notna(r["videos"]) else 0}</span>'
+        f'<span class="n">{fmt_num(r["views"]) if has_views_p and pd.notna(r["views"]) else dash}</span>'
+        f'<span class="n hide-sm">{fmt_num(r["likes"]) if pd.notna(r["likes"]) else dash}</span>'
+        f'<span class="n">{eng_txt}</span>'
+        f'<span class="n">{fmt_num(r["followers"]) if pd.notna(r["followers"]) else dash}{fc}</span></div>')
+st.markdown('<div class="glass">' + "".join(rows) + "</div>", unsafe_allow_html=True)
+
 # ---------------- when to post ----------------
 st.markdown("## When to post")
 st.markdown('<p class="lede">Median views by the day and time you posted (Eastern). '
