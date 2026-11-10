@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Media Kit</title>
 <meta name="description" content="Instagram creator media kit with audience and performance stats.">
-<link rel="stylesheet" href="style.css?v=202611101938">
+<link rel="stylesheet" href="style.css?v=202611101946">
 </head>
 <body>
 <div class="wrap">
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
   <main id="app"></main>
 </div>
-<script src="data.js?v=202611101938"></script>
-<script src="common.js?v=202611101938"></script>
+<script src="data.js?v=202611101946"></script>
+<script src="common.js?v=202611101946"></script>
 <script>
 mark("kit");
-const P = D.profile, R = D.reels;
+const P = D.profile, R = D.reels.filter(r => r.kind !== "post");
 const now = Date.now(), DAY = 864e5;
 const followers = D.followers.length ? D.followers[D.followers.length - 1].n : null;
 const recent = R.filter(r => (now - dt(r.posted)) / DAY <= 90 && (now - dt(r.posted)) / DAY >= 3);
@@ -64,7 +64,7 @@ if (keys.length) {
     return `<div class="glass panel bars">${rows.map(([k, v]) => `<div class="row"><span class="lbl">${esc((names[k] || k).split(",")[0])}</span>
       <span class="track"><span class="fill" style="display:block;width:${(v / peak * 100).toFixed(1)}%"></span></span><span class="pct">${v / tot < .005 ? "<1" : Math.round(v / tot * 100)}%</span></div>`).join("")}</div>`;
   };
-  html += `<h2>Who's watching</h2><p class="lede">Follower breakdown reported by Instagram.</p><div class="cols"><div>`;
+  html += `<h2>Who's watching</h2><p class="lede">${D.demo_source === "viewers" ? "Accounts that viewed your posts and reels this month, as reported by Instagram." : "Follower breakdown reported by Instagram."}</p><div class="cols"><div>`;
   if (demo.age) html += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false });
   if (demo.gender) {
     const g = demo.gender, t = Object.values(g).reduce((s, x) => s + x, 0), m = (g.M || 0) / t, f = (g.F || 0) / t;
