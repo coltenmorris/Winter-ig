@@ -16,17 +16,23 @@
   <section class="kpis glass" id="kpis"></section>
 
   <h2>Posting calendar</h2>
-  <p class="lede">Color shows how many reels you posted each day. The number shows the value you pick. Tap a day to see what you posted.</p>
-  <div class="controls">
-    <label class="f">Month<select id="month"></select></label>
-    <label class="f">Number on each day<select id="metric"></select></label>
-    <label class="f">Reel type<select id="kind"><option value="all">All reels</option><option value="reg">Regular reels</option><option value="trial">Trial reels</option></select></label>
-    <label class="f">Hashtag<select id="tag"><option value="">Any hashtag</option></select></label>
-  </div>
-  <div class="legend">Reels posted: <span><i style="background:rgba(36,48,42,.45)"></i>0</span><span><i style="background:#2E4030"></i>1</span><span><i style="background:var(--moss)"></i>2</span><span><i style="background:var(--fern)"></i>3+</span></div>
-  <div class="cal glass"><div class="dows"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div><div class="grid" id="grid"></div></div>
+  <p class="lede">Each day shows how many videos you posted. Tap a day to list its videos, or pick a date range below.</p>
+  <div class="controls one"><label class="f">Month<select id="month"></select></label></div>
+  <div class="legend">Videos posted: <span><i style="background:rgba(36,48,42,.45)"></i>0</span><span><i style="background:#2E4030"></i>1</span><span><i style="background:var(--moss)"></i>2</span><span><i style="background:var(--fern)"></i>3+</span></div>
+  <div class="cal big glass"><div class="dows"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div><div class="grid" id="grid"></div></div>
   <div class="summary" id="msum"></div>
-  <div id="dayview"><p class="lede">Tap a day on the calendar to see its reels.</p></div>
+
+  <h2 id="rangeh">Videos in a range</h2>
+  <div class="controls range">
+    <label class="f">Date range<select id="preset">
+      <option value="month">This month</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option>
+      <option value="90">Last 90 days</option><option value="all">All time</option><option value="custom">Custom dates</option></select></label>
+    <label class="f">Sort by<select id="sort"></select></label>
+    <label class="f cd">From<input type="date" id="from"></label>
+    <label class="f cd">To<input type="date" id="to"></label>
+  </div>
+  <div class="summary" id="rsum"></div>
+  <div id="rlist"></div>
 
   <h2>When to post</h2>
   <p class="lede" id="wklede"></p>
@@ -63,80 +69,83 @@ $("kpis").innerHTML = `<div><div class="v">${fmt(fol)}</div><div class="k">Follo
   <div><div class="v">${watch.length ? avg(watch).toFixed(1) + "s" : R.length}</div><div class="k">${watch.length ? "Avg watch time" : "Reels tracked"}</div></div>`;
 
 // ---------- calendar ----------
-const metrics = (HAS_VIEWS ? [["views", "Views"], ["engagement", "Engagement rate"]] : [])
-  .concat([["likes", "Likes"], ["comments", "Comments"]], HAS_VIEWS ? [["shares", "Shares"]] : [], [["posts", "Reels posted"]]);
-$("metric").innerHTML = metrics.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
-const tags = [...new Set(R.flatMap(r => r.tags))].sort();
-$("tag").innerHTML += tags.map(t => `<option value="${esc(t)}">#${esc(t)}</option>`).join("");
 const ym = d => d.slice(0, 7);
-const today = new Date(), thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+const pad2 = n => String(n).padStart(2, "0");
+const today = new Date(), todayKey = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+const thisMonth = todayKey.slice(0, 7);
 const allMonths = []; {
   const first = R.length ? R[R.length - 1].date.slice(0, 7) : thisMonth;
   let [y, m] = thisMonth.split("-").map(Number);
-  while (`${y}-${String(m).padStart(2, "0")}` >= first) { allMonths.push(`${y}-${String(m).padStart(2, "0")}`); m--; if (!m) { m = 12; y--; } }
+  while (`${y}-${pad2(m)}` >= first) { allMonths.push(`${y}-${pad2(m)}`); m--; if (!m) { m = 12; y--; } }
 }
 const withPosts = new Set(R.map(r => ym(r.date)));
-$("month").innerHTML = allMonths.map(m => `<option value="${m}">${new Date(m + "-15").toLocaleDateString("en-US", { month: "long", year: "numeric" })}${withPosts.has(m) ? "" : " (no reels)"}</option>`).join("");
+$("month").innerHTML = allMonths.map(m => `<option value="${m}">${new Date(m + "-15").toLocaleDateString("en-US", { month: "long", year: "numeric" })}${withPosts.has(m) ? "" : " (no videos)"}</option>`).join("");
 $("month").value = allMonths.find(m => withPosts.has(m)) || thisMonth;
-
 let selected = null;
-const filtered = () => R.filter(r => {
-  const k = $("kind").value, t = $("tag").value;
-  if (k === "reg" && r.trial) return false;
-  if (k === "trial" && !r.trial) return false;
-  if (t && !r.tags.includes(t)) return false;
-  return true;
-});
-
-function dayValue(list, k) {
-  if (!list.length) return "";
-  if (k === "posts") return String(list.length);
-  if (k === "engagement") {
-    const v = list.map(r => r.total.views), i = list.map(r => r.total.interactions);
-    const sv = v.reduce((s, x) => s + (x || 0), 0), si = i.reduce((s, x) => s + (x || 0), 0);
-    return sv ? Math.round(si / sv * 100) + "%" : "";
-  }
-  const vals = list.map(r => r.total[k]).filter(v => v != null);
-  return vals.length ? fmt(vals.reduce((s, x) => s + x, 0)) : "";
-}
 
 function renderCalendar() {
   const [y, m] = $("month").value.split("-").map(Number);
-  const first = new Date(y, m - 1, 1), n = new Date(y, m, 0).getDate(), offset = (first.getDay() + 6) % 7;
-  const list = filtered(), k = $("metric").value, byDay = {};
-  list.forEach(r => (byDay[r.date] ||= []).push(r));
-  let cells = Array.from({ length: offset }, () => `<div class="day empty"></div>`);
+  const n = new Date(y, m, 0).getDate(), offset = (new Date(y, m - 1, 1).getDay() + 6) % 7, byDay = {};
+  R.forEach(r => (byDay[r.date] ||= []).push(r));
+  const cells = Array.from({ length: offset }, () => `<div class="day empty"></div>`);
   for (let d = 1; d <= n; d++) {
-    const key = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`, rs = byDay[key] || [];
-    const lvl = Math.min(rs.length, 3), fut = new Date(y, m - 1, d) > today;
-    cells.push(`<button class="day l${lvl}${fut ? " future" : ""}" data-day="${key}" aria-pressed="${key === selected}"
-      aria-label="${key}, ${rs.length} reels"><span class="d">${d}</span><span class="v">${dayValue(rs, k)}</span></button>`);
+    const key = `${y}-${pad2(m)}-${pad2(d)}`, c = (byDay[key] || []).length;
+    cells.push(`<button class="day l${Math.min(c, 3)}${key > todayKey ? " future" : ""}" data-day="${key}" aria-pressed="${key === selected}"
+      aria-label="${key}, ${c} videos"><span class="d">${d}</span><span class="v">${c || ""}</span></button>`);
   }
   $("grid").innerHTML = cells.join("");
-  const mlist = list.filter(r => ym(r.date) === $("month").value);
-  const mtot = mlist.map(r => val(r)).filter(v => v != null).reduce((s, x) => s + x, 0);
-  $("msum").innerHTML = `<span><b>${mlist.length}</b>reels this month</span><span><b>${new Set(mlist.map(r => r.date)).size}</b>days posted</span><span><b>${fmt(mtot)}</b>${MAIN_LABEL} to date</span>`;
+  const ml = R.filter(r => ym(r.date) === $("month").value);
+  $("msum").innerHTML = `<span><b>${ml.length}</b>videos this month</span><span><b>${new Set(ml.map(r => r.date)).size}</b>days posted</span>`;
 }
 
-function renderDay() {
-  if (!selected) return;
-  const rs = filtered().filter(r => r.date === selected).sort((a, b) => a.posted.localeCompare(b.posted));
-  const title = fmtDate(selected + "T12:00", { weekday: "long", month: "long", day: "numeric" });
-  $("dayview").innerHTML = `<h3 style="font-size:1.8rem;margin:10px 0 12px">${title}</h3>` + (rs.length ? rs.map(r => `
-    <button class="daycard glass" onclick="openReel('${r.id}')">${thumb(r)}<div>
-      <div class="when">${fmtTime(r.posted)}${r.trial ? ", trial reel" : ""}</div>
+// ---------- range + sort ----------
+const SORTS = [["new", "Newest first"], ["old", "Oldest first"]]
+  .concat(HAS_VIEWS ? [["views", "Most views"], ["eng", "Highest engagement"]] : [], [["likes", "Most likes"], ["comments", "Most comments"]]);
+$("sort").innerHTML = SORTS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+const minDate = R.length ? R[R.length - 1].date : todayKey;
+$("from").min = $("to").min = minDate; $("from").max = $("to").max = todayKey;
+$("from").value = minDate; $("to").value = todayKey;
+const addDays = (key, n) => { const d = new Date(key + "T12:00"); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+const nice = k => fmtDate(k + "T12:00", { month: "short", day: "numeric", year: "numeric" });
+
+function renderRange() {
+  const p = $("preset").value;
+  document.querySelectorAll(".cd").forEach(el => el.style.display = p === "custom" ? "" : "none");
+  let from, to, label;
+  if (p === "month") { const [y, m] = $("month").value.split("-").map(Number); from = `${y}-${pad2(m)}-01`; to = `${y}-${pad2(m)}-${pad2(new Date(y, m, 0).getDate())}`;
+    label = new Date(from + "T12:00").toLocaleDateString("en-US", { month: "long", year: "numeric" }); }
+  else if (p === "all") { from = minDate; to = todayKey; label = "all time"; }
+  else if (p === "custom") { from = $("from").value || minDate; to = $("to").value || todayKey; if (from > to) [from, to] = [to, from];
+    label = from === to ? nice(from) : `${nice(from)} to ${nice(to)}`; }
+  else { from = addDays(todayKey, 1 - Number(p)); to = todayKey; label = `last ${p} days`; }
+  const s = $("sort").value, get = {
+    new: r => -dt(r.posted), old: r => +dt(r.posted), views: r => -(r.total.views ?? -1), eng: r => -(r.total.engagement ?? -1),
+    likes: r => -(r.total.likes ?? -1), comments: r => -(r.total.comments ?? -1) }[s];
+  const list = R.filter(r => r.date >= from && r.date <= to).sort((a, b) => get(a) - get(b));
+  const tot = list.map(r => val(r)).filter(v => v != null).reduce((x, y) => x + y, 0);
+  $("rsum").innerHTML = `<span><b>${list.length}</b>videos, ${esc(label)}</span><span><b>${fmt(tot)}</b>${MAIN_LABEL}</span>
+    <span><b>${list.length ? fmt(tot / list.length) : 0}</b>${MAIN_LABEL} per video</span>`;
+  $("rlist").innerHTML = list.length ? list.map(r => `
+    <button class="daycard" onclick="openReel('${r.id}')">${thumb(r)}<div>
+      <div class="when">${fmtDate(r.posted, { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at ${fmtTime(r.posted)}${r.trial ? ", trial reel" : ""}</div>
       <div class="cap">${esc(r.caption || "No caption")}</div>
       <div class="st"><b>${fmt(val(r))}</b> ${MAIN_LABEL}${r.total.engagement != null ? ` &nbsp; <b>${pct(r.total.engagement)}</b> engagement` : ` &nbsp; <b>${fmt(r.total.comments)}</b> comments`}</div>
-      <div class="go">View analytics</div></div></button>`).join("") : `<p class="lede">No reels match your filters on this day.</p>`);
+      <div class="go">View analytics</div></div></button>`).join("") : `<p class="lede">No videos posted in this range.</p>`;
 }
 
 $("grid").addEventListener("click", e => {
   const b = e.target.closest(".day[data-day]"); if (!b) return;
-  selected = b.dataset.day; renderCalendar(); renderDay();
-  $("dayview").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+  selected = b.dataset.day;
+  $("preset").value = "custom"; $("from").value = $("to").value = selected;
+  renderCalendar(); renderRange();
+  $("rangeh").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 });
-["month", "metric", "kind", "tag"].forEach(id => $(id).addEventListener("change", () => { renderCalendar(); renderDay(); }));
-renderCalendar();
+$("month").addEventListener("change", () => { renderCalendar(); if ($("preset").value === "month") renderRange(); });
+["preset", "sort", "from", "to"].forEach(id => $(id).addEventListener("change", () => {
+  if (id === "preset" && $("preset").value !== "custom") selected = null;
+  renderCalendar(); renderRange();
+}));
+renderCalendar(); renderRange();
 
 // ---------- when to post ----------
 const settled = R.filter(r => (Date.now() - dt(r.posted)) / 864e5 >= 3 && val(r) != null);
