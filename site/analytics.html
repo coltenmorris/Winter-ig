@@ -60,8 +60,22 @@
   <div class="foot">Data from the Instagram API, refreshed by the daily sync.</div>
 </div>
 <script src="data.js"></script>
+<script>
+if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
+  document.addEventListener("DOMContentLoaded", () => {
+    const main = document.querySelector("main#app") || document.querySelector(".wrap");
+    const nav = document.querySelector("nav.top");
+    main.innerHTML = (main.id === "app" ? "" : (nav ? nav.outerHTML : "")) +
+      '<h1 style="font-size:clamp(2.6rem,7vw,5rem);line-height:.92;letter-spacing:-.05em">Creator analytics</h1>' +
+      '<p class="lede" style="margin-top:18px">Stats will appear here after the first sync. Add the account\'s access token to the ' +
+      'IG_ACCESS_TOKEN secret on GitHub, then run Daily Instagram sync from the Actions tab.</p>';
+  });
+  window.__EMPTY = true;
+}
+</script>
 <script src="common.js"></script>
 <script>
+if (!window.__EMPTY) {
 mark("an");
 const ALL = D.reels, R = ALL.filter(r => r.kind !== "post"), $ = id => document.getElementById(id);
 $("updated").textContent = `Updated ${D.updated}. ${R.length} reels tracked.`;
@@ -262,6 +276,7 @@ $("list").innerHTML = `<div class="rl head"><span>Reel</span><span class="n">${H
     <small>${fmtDate(r.posted, { month: "short", day: "numeric", year: "numeric" })}, ${fmtTime(r.posted)}</small></span>
     <span class="n">${fmt(val(r))}</span><span class="n">${HAS_VIEWS ? pct(r.total.engagement) : fmt(r.total.comments)}</span>
     <span class="n hide-sm">${HAS_VIEWS ? (r.total.watch_s != null ? r.total.watch_s + "s" : "n/a") : fmt(r.total.shares)}</span></button>`).join("");
+}
 </script>
 </body>
 </html>

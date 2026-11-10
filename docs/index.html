@@ -5,16 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Media Kit</title>
 <meta name="description" content="Instagram creator media kit with audience and performance stats.">
-<link rel="stylesheet" href="style.css?v=202611102040">
+<link rel="stylesheet" href="style.css?v=202611102051">
 </head>
 <body>
 <div class="wrap">
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
   <main id="app"></main>
 </div>
-<script src="data.js?v=202611102040"></script>
-<script src="common.js?v=202611102040"></script>
+<script src="data.js?v=202611102051"></script>
 <script>
+if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
+  document.addEventListener("DOMContentLoaded", () => {
+    const main = document.querySelector("main#app") || document.querySelector(".wrap");
+    const nav = document.querySelector("nav.top");
+    main.innerHTML = (main.id === "app" ? "" : (nav ? nav.outerHTML : "")) +
+      '<h1 style="font-size:clamp(2.6rem,7vw,5rem);line-height:.92;letter-spacing:-.05em">Media kit</h1>' +
+      '<p class="lede" style="margin-top:18px">Stats will appear here after the first sync. Add the account\'s access token to the ' +
+      'IG_ACCESS_TOKEN secret on GitHub, then run Daily Instagram sync from the Actions tab.</p>';
+  });
+  window.__EMPTY = true;
+}
+</script>
+<script src="common.js?v=202611102051"></script>
+<script>
+if (!window.__EMPTY) {
 mark("kit");
 const P = D.profile, R = D.reels.filter(r => r.kind !== "post" && !r.ad), ADS = D.reels.filter(r => r.ad);
 const now = Date.now(), DAY = 864e5;
@@ -126,6 +140,7 @@ if (D.followers.length > 1) {
 }
 html += `<div class="foot">Numbers come directly from the Instagram API and update daily. Last updated ${esc(D.updated)}.</div>`;
 document.getElementById("app").innerHTML = html;
+}
 </script>
 </body>
 </html>
