@@ -10,18 +10,20 @@ import db
 
 LOCAL_TZ = "America/New_York"
 
-# ---------------- palette (muted Hyperbloom: sage, moss, tan) ----------------
-MOSS = "#4F5D43"     # deep green: headings, primary data
-SAGE = "#8E9F7E"     # mid green: secondary data
-FERN = "#C9D2B8"     # pale green: fills, tracks
-SAND = "#CDB592"     # tan: highlights, best performers
-OAT = "#EFE7D8"      # light base
-BARK = "#4A3F33"     # body text
-DUSK = "#7C7062"     # secondary text
-LINE = "rgba(255,252,245,.75)"  # hairlines
-GLASS = "rgba(250,246,238,.5)"  # translucent panels
-# aliases used by the pages
-NAVY, LANE, SPLIT, RULE, SLATE, INK, CHALK = MOSS, SAGE, SAND, FERN, DUSK, BARK, OAT
+# ---------------- palette (overgrown: forest dark, moss, mist, stone, one lamp accent) ----------------
+ABYSS = "#0E1411"    # page
+CANOPY = "#141C17"   # panels
+IVY = "#24302A"      # low fills, tracks
+MOSSD = "#4E6A47"    # mid data
+FERNB = "#8FAF78"    # primary data
+MIST = "#D3DBCF"     # text
+STONE = "#8B9589"    # secondary text
+LAMP = "#E6D49C"     # best performers only
+RULE_C = "rgba(211,219,207,.14)"
+# names used by the pages: bright data = MOSS, mid = SAGE, low = FERN, accent = SAND
+MOSS, SAGE, FERN, SAND, OAT, BARK, DUSK = FERNB, MOSSD, "#2E4030", LAMP, ABYSS, MIST, STONE
+LINE, GLASS = RULE_C, CANOPY
+NAVY, LANE, SPLIT, RULE, SLATE, INK, CHALK = MOSS, SAGE, SAND, IVY, STONE, MIST, ABYSS
 
 
 def cfg(key: str, default: str = "") -> str:
@@ -86,180 +88,167 @@ def fmt_num(n) -> str:
     return f"{n:,.0f}"
 
 
-# ---------------- styling ----------------
-FONT = "Jost"
-FONT_DISPLAY = "Italiana"
-FONT_SCRIPT = "Pinyon Script"
+# ---------------- styling (neo-Swiss) ----------------
+FONT = "Schibsted Grotesk"
+FONT_DISPLAY = FONT
 
 
 def inject_css():
     st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Italiana&family=Jost:wght@300;400;500&family=Pinyon+Script&display=swap');
-html, body, [class*="st-"], .stMarkdown, button, input, textarea {{ font-family: '{FONT}', system-ui, sans-serif; }}
-
-/* The bloom: soft blurred color field behind everything */
-.stApp {{ background: {OAT}; color: {BARK}; }}
-.stApp::before {{ content:""; position:fixed; inset:-14vmax; z-index:0; pointer-events:none; filter: blur(60px) saturate(1.05);
-  background:
-    radial-gradient(34vmax 28vmax at 10% 14%, #8A9C78 0%, transparent 68%),
-    radial-gradient(36vmax 30vmax at 82% 8%, #CDAE82 0%, transparent 68%),
-    radial-gradient(30vmax 34vmax at 58% 52%, #B9C6A2 0%, transparent 70%),
-    radial-gradient(30vmax 26vmax at 14% 80%, #C2A57C 0%, transparent 68%),
-    radial-gradient(28vmax 26vmax at 94% 82%, #6E8160 0%, transparent 68%),
-    radial-gradient(22vmax 18vmax at 40% 96%, #9DAA84 0%, transparent 70%); }}
-/* Hairline frame inset from the viewport edge */
-.stApp::after {{ content:""; position:fixed; inset:14px; border:1px solid {LINE}; z-index:0; pointer-events:none; }}
+@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap');
+html, body, [class*="st-"], .stMarkdown, button, input, textarea, select {{ font-family: '{FONT}', 'Helvetica Neue', Arial, sans-serif; }}
+[data-testid="stIconMaterial"], .material-symbols-rounded, [class*="material-symbols"] {{ font-family: 'Material Symbols Rounded' !important; }}
+.stApp {{ background: {ABYSS}; color: {MIST}; font-feature-settings: "tnum" 1; }}
+.stApp::before {{ content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background: radial-gradient(50% 38% at 62% -6%, rgba(211,219,207,.10), transparent 70%),
+              radial-gradient(40% 30% at 8% 100%, rgba(78,106,71,.16), transparent 70%); }}
 [data-testid="stHeader"] {{ background: transparent; }}
-[data-testid="stSidebar"] {{ background: rgba(239,231,216,.7); backdrop-filter: blur(14px); border-right:1px solid {LINE}; }}
-.block-container {{ max-width: 1080px; padding-top: 3rem; padding-bottom: 4rem; position:relative; z-index:1; }}
-
-h1, h2, h3 {{ font-family: '{FONT_DISPLAY}', serif !important; color: {MOSS}; font-weight: 400 !important; }}
-h2 {{ font-size: 2.6rem !important; letter-spacing: .04em; margin: 3rem 0 .1rem !important; }}
-h3 {{ font-size: 1.35rem !important; letter-spacing: .03em; }}
-.lede {{ color: {DUSK}; font-weight: 300; font-size: 1.02rem; margin: 0 0 1.2rem; max-width: 62ch; }}
-a {{ color: {MOSS}; }}
-:focus-visible {{ outline: 2px solid {MOSS} !important; outline-offset: 3px; }}
-
-.glass {{ background: {GLASS}; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid {LINE}; }}
-.stripes {{ height: 34px; background: repeating-linear-gradient(to bottom, {LINE} 0 2px, transparent 2px 7px); }}
-.stripes.short {{ width: 120px; height: 22px; }}
-
-/* Hero */
-.hero {{ display:grid; grid-template-columns: 1fr 1.35fr; gap: 0; position: relative; }}
-.hero .count {{ padding: 28px 30px; border:1px solid {LINE}; border-right:none; position:relative; overflow:hidden; }}
-.hero .count .n {{ font: 400 6.4rem/0.9 '{FONT_DISPLAY}'; color: {MOSS}; letter-spacing: .01em; }}
-.hero .count .l {{ font-weight: 300; color: {DUSK}; margin-top: 8px; letter-spacing:.04em; }}
-.hero .count .px {{ position:absolute; right:22px; top:22px; width:64px; height:40px; opacity:.6;
-    background: conic-gradient({LINE} 25%, transparent 0 50%, {LINE} 0 75%, transparent 0) 0 0/10px 10px; }}
-.hero .id {{ padding: 26px 30px 24px; }}
-.hero .id h1 {{ font-size: 3.6rem !important; line-height: 1 !important; letter-spacing: .05em; margin:0 !important; padding:0 !important; }}
-.hero .id .row {{ display:flex; justify-content:space-between; align-items:center; gap: 16px; margin-top: 16px; }}
-.hero .id .handle {{ font-weight:300; color: {DUSK}; letter-spacing:.05em; }}
-.hero .id .bio {{ font-weight:300; color: {BARK}; margin-top: 12px; max-width: 46ch; line-height: 1.5; }}
-.hero .avatar {{ width:64px; height:64px; border-radius:50%; object-fit:cover; border:1px solid {LINE};
-    display:flex; align-items:center; justify-content:center; background:{FERN}; color:{MOSS}; font: 400 1.8rem '{FONT_DISPLAY}'; }}
-.script {{ font-family: '{FONT_SCRIPT}', cursive; color: {MOSS}; font-size: 4.4rem; line-height: 1; margin: 6px 0 -6px 30px; }}
-.contact {{ display:inline-block; margin-top: 16px; border:1px solid {MOSS}; color: {MOSS} !important; font-weight: 400;
-    padding: 8px 18px; text-decoration: none !important; letter-spacing:.04em; background: rgba(255,252,245,.35); }}
-.contact:hover {{ background: {MOSS}; color: {OAT} !important; }}
-
-/* Stats board */
-.board {{ display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 18px; }}
-.board > div {{ padding: 18px 22px; border-left: 1px solid {LINE}; }}
-.board > div:first-child {{ border-left: none; }}
-.board .v {{ font: 400 2.9rem/1 '{FONT_DISPLAY}'; color: {MOSS}; }}
-.board .k {{ color: {DUSK}; font-weight: 300; font-size: .95rem; margin-top: 8px; }}
-.board .d {{ color: {MOSS}; font-size: .85rem; margin-top: 2px; }}
-
-/* Reel cards */
-.reels {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }}
-.reel {{ text-decoration:none !important; color:{BARK} !important; display:block; }}
-.reel .thumb {{ aspect-ratio: 4/5; position: relative; overflow:hidden; border:1px solid {LINE};
-    background: radial-gradient(60% 50% at 30% 30%, {SAND}, transparent 70%),
-                radial-gradient(70% 60% at 75% 70%, {SAGE}, transparent 70%), {FERN}; }}
-.reel .thumb img {{ width:100%; height:100%; object-fit:cover; display:block; }}
-.reel .thumb .ph {{ position:absolute; inset:auto 16px 16px 16px; color:#FFFDF8; font: 400 1.55rem/1.1 '{FONT_DISPLAY}'; letter-spacing:.03em; }}
-.reel .best {{ position:absolute; top:12px; left:12px; border:1px solid #FFFDF8; color:#FFFDF8; font-weight:400;
-    font-size:.8rem; padding:3px 9px; letter-spacing:.05em; background: rgba(79,93,67,.35); backdrop-filter: blur(6px); }}
-.reel .meta {{ display:flex; justify-content: space-between; padding: 12px 14px 4px; }}
-.reel .meta b {{ font: 400 1.8rem/1 '{FONT_DISPLAY}'; color:{MOSS}; display:block; }}
-.reel .meta span {{ color:{DUSK}; font-weight:300; font-size:.85rem; }}
-.reel .t {{ padding: 4px 14px 14px; color:{DUSK}; font-weight:300; font-size:.92rem; line-height:1.35; }}
-.reel .card {{ border:1px solid {LINE}; border-top:none; }}
-
-/* Audience bars */
-.panel {{ padding: 18px 22px 20px; }}
-.bars .row {{ display:grid; grid-template-columns: 10rem 1fr 3.2rem; gap: 12px; align-items:center; margin: 9px 0; }}
-.bars .lbl {{ font-size:.95rem; font-weight: 300; }}
-.bars .track {{ height: 6px; background: rgba(255,252,245,.6); overflow:hidden; }}
-.bars .fill {{ height:100%; background: linear-gradient(90deg, {SAGE}, {MOSS}); }}
-.bars .pct {{ text-align:right; color:{DUSK}; font-variant-numeric: tabular-nums; font-size:.92rem; }}
-.split {{ display:flex; height: 8px; overflow:hidden; margin: 12px 0 10px; }}
-.legend {{ color:{DUSK}; font-weight:300; font-size:.92rem; }}
-.legend i {{ display:inline-block; width:10px; height:10px; margin-right:6px; vertical-align:-1px; }}
-
-.foot {{ color:{DUSK}; font-weight:300; font-size:.88rem; margin-top: 3.5rem; padding-top: 12px; border-top:1px solid {LINE}; }}
-[data-testid="stMetricValue"] {{ font-family:'{FONT_DISPLAY}'; color:{MOSS}; font-size: 2.4rem; }}
-[data-testid="stMetric"] {{ background:{GLASS}; border:1px solid {LINE}; padding: 14px 18px; backdrop-filter: blur(14px); }}
-[data-testid="stVegaLiteChart"], [data-testid="stDataFrame"] {{ box-sizing: border-box; overflow: hidden; background:{GLASS}; border:1px solid {LINE}; padding:0; backdrop-filter: blur(14px); }}
-.stButton > button {{ border-radius: 0; border:1px solid {MOSS}; }}
-
-/* No sideways scrolling anywhere */
+[data-testid="stSidebar"] {{ background: {CANOPY}; border-right: 1px solid {RULE_C}; }}
+.block-container {{ max-width: 1120px; padding-top: 2.4rem; padding-bottom: 4.5rem; position: relative; z-index: 1; }}
 html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{ overflow-x: hidden; max-width: 100vw; }}
 img {{ max-width: 100%; }}
+p, li, label, span, div {{ color: inherit; }}
+
+h1, h2, h3 {{ font-family: '{FONT}', sans-serif !important; color: {MIST} !important; font-weight: 700 !important; letter-spacing: -.035em; }}
+h1 {{ font-size: clamp(2.6rem, 7vw, 5rem) !important; line-height: .92 !important; letter-spacing: -.05em; }}
+h2 {{ font-size: clamp(2rem, 4.4vw, 3.2rem) !important; line-height: 1 !important; margin: 4rem 0 .5rem !important;
+      padding-top: 16px !important; border-top: 1px solid {RULE_C}; }}
+h3 {{ font-size: 1.05rem !important; letter-spacing: -.01em; font-weight: 600 !important; }}
+.lede {{ color: {STONE}; margin: 0 0 1.3rem; max-width: 60ch; }}
+a {{ color: {FERNB}; }}
+:focus-visible {{ outline: 2px solid {LAMP} !important; outline-offset: 3px; }}
+.glass {{ background: {CANOPY}; border: 1px solid {RULE_C}; }}
+.stripes, .px, .script {{ display: none; }}
+
+/* Hero */
+.hero {{ display:grid; grid-template-columns: 7fr 5fr; gap: 0 32px; align-items: end; }}
+.hero .id {{ order: 1; background: none !important; border: 0 !important; padding: 0; }}
+.hero .count {{ order: 2; background: none !important; border: 0 !important; text-align: right; padding: 0 0 6px; }}
+.hero .id h1 {{ font-size: clamp(3rem, 8.2vw, 6.6rem) !important; line-height: .9 !important; letter-spacing: -.055em; margin: 0 !important; padding: 0 !important; }}
+.hero .id .row {{ display:flex; align-items:center; gap: 14px; margin-top: 22px; }}
+.hero .id .handle {{ color: {STONE}; font-weight: 500; }}
+.hero .id .bio {{ margin-top: 14px; max-width: 42ch; }}
+.hero .avatar {{ width:44px; height:44px; border-radius:50%; object-fit:cover; order:-1; border:1px solid {RULE_C};
+    display:flex; align-items:center; justify-content:center; background:{IVY}; color:{MIST}; font-weight:700; }}
+.hero .count .n {{ font-size: clamp(4rem, 11vw, 9rem); font-weight: 800; line-height: .82; letter-spacing: -.06em; color: {FERNB}; }}
+.hero .count .l {{ color: {STONE}; margin-top: 12px; font-weight: 500; }}
+.contact {{ display:inline-block; margin-top: 22px; background: {MIST}; color: {ABYSS} !important; padding: 11px 20px;
+    text-decoration: none !important; font-weight: 600; }}
+.contact:hover {{ background: {LAMP}; }}
+
+/* Stats board */
+.board {{ display:grid; grid-template-columns: repeat(4, 1fr); margin-top: 44px; background: none !important;
+    border: 0 !important; border-top: 1px solid {RULE_C} !important; border-bottom: 1px solid {RULE_C} !important; }}
+.board > div {{ padding: 18px 20px 20px 0; min-width: 0; }}
+.board > div + div {{ padding-left: 20px; border-left: 1px solid {RULE_C}; }}
+.board .v {{ font-size: clamp(2rem, 4vw, 3.1rem); font-weight: 700; line-height: 1; letter-spacing: -.045em; color: {MIST}; }}
+.board .k {{ color: {STONE}; font-size: .9rem; margin-top: 10px; }}
+.board .d {{ color: {FERNB}; font-size: .85rem; margin-top: 4px; }}
+
+/* Reel cards */
+.reels {{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 28px 20px; align-items: start; }}
+.reel {{ text-decoration:none !important; color:{MIST} !important; display:block; }}
+.reel .thumb {{ aspect-ratio: 4/5; position: relative; overflow:hidden; background: linear-gradient(180deg, #1C2620, #0F1612) !important; border: 0; }}
+.reel .thumb img {{ width:100%; height:100%; object-fit:cover; display:block; }}
+.reel .thumb .ph {{ position:absolute; inset:auto 14px 14px 14px; color:{MIST}; font-weight: 700; font-size: 1.2rem; line-height: 1.1; letter-spacing: -.03em; }}
+.reel .best {{ position:absolute; top:0; left:0; background:{LAMP}; color:{ABYSS}; font-size:.78rem; font-weight:700; padding: 5px 10px; border: 0; }}
+.reel .card {{ background: none !important; border: 0 !important; border-top: 1px solid {RULE_C} !important; margin-top: 10px; }}
+.reel .meta {{ display:flex; justify-content: space-between; padding: 10px 0 2px; }}
+.reel .meta b {{ font-size: 1.6rem; font-weight: 700; letter-spacing: -.04em; line-height: 1; display:block; color: {MIST}; }}
+.reel .meta span {{ color:{STONE}; font-size:.82rem; }}
+.reel .t {{ padding: 6px 0 0; color:{STONE}; font-size:.9rem; }}
+
+/* Bars */
+.panel {{ padding: 18px 20px 20px; }}
+.bars .row {{ display:grid; grid-template-columns: 9rem 1fr 3.4rem; gap: 14px; align-items:center; margin: 10px 0; }}
+.bars .lbl {{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+.bars .track {{ height: 4px; background: {IVY}; }}
+.bars .fill {{ height:100%; background: {FERNB}; }}
+.bars .pct {{ text-align:right; color:{STONE}; font-size:.92rem; }}
+.split {{ display:flex; height: 6px; margin: 10px 0 10px; }}
+.legend {{ color:{STONE}; font-size:.9rem; }}
+.legend i {{ display:inline-block; width:10px; height:10px; margin-right:6px; }}
+.foot {{ color:{STONE}; font-size:.85rem; margin-top: 4.5rem; padding-top: 14px; border-top:1px solid {RULE_C}; }}
+
+/* Streamlit widgets */
+[data-testid="stMetric"] {{ background: none; border: 0; border-top: 1px solid {RULE_C}; padding: 14px 0 6px; }}
+[data-testid="stMetricValue"] {{ color:{MIST}; font-weight: 700; letter-spacing: -.045em; font-size: 2.4rem; }}
+[data-testid="stMetricLabel"] {{ color:{STONE}; }}
+[data-testid="stVegaLiteChart"] {{ box-sizing: border-box; overflow: hidden; background:{CANOPY}; border:1px solid {RULE_C}; padding:0; }}
+.stButton > button {{ border-radius: 0; background: {MIST}; color: {ABYSS}; border: 0; font-weight: 600; }}
+.stButton > button:hover {{ background: {LAMP}; color: {ABYSS}; }}
+[data-baseweb="select"] > div, [data-baseweb="input"] > div {{ border-radius: 0 !important; background: {CANOPY} !important; border-color: {RULE_C} !important; }}
+[data-testid="stExpander"] details {{ border-radius: 0; border-color: {RULE_C}; background: {CANOPY}; }}
+[data-testid="stPageLink"] a span {{ color: {STONE}; font-weight: 500; }}
+[data-testid="stDialog"] [role="dialog"] {{ background: {CANOPY}; border: 1px solid {RULE_C}; border-radius: 0; color: {MIST}; }}
 
 /* Reel pop-up */
-.reelhead {{ display:grid; grid-template-columns: 96px 1fr; gap: 16px; align-items:start; margin-bottom: 14px; }}
-.reelhead img, .reelhead .noimg {{ width:96px; aspect-ratio: 4/5; object-fit:cover; border:1px solid {LINE};
-    background: radial-gradient(60% 50% at 30% 30%, {SAND}, transparent 70%), radial-gradient(70% 60% at 75% 70%, {SAGE}, transparent 70%), {FERN}; }}
-.reelhead .when {{ color:{DUSK}; font-size:.9rem; }}
-.reelhead .cap {{ margin: 6px 0 8px; line-height:1.45; overflow-wrap:anywhere; }}
-table.ms {{ width:100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }}
-table.ms th, table.ms td {{ padding: 8px 6px; border-bottom: 1px solid {FERN}; text-align:right; font-size:.95rem; }}
-table.ms thead th {{ color:{DUSK}; font-weight:400; font-size:.85rem; vertical-align:bottom; }}
-table.ms tbody th {{ text-align:left; font-weight:400; color:{BARK}; }}
-table.ms th:first-child {{ width: 34%; }}
-table.ms td {{ font-family:'{FONT_DISPLAY}', serif; font-size: 1.2rem; color:{MOSS}; }}
-table.ms .na {{ font-family:'{FONT}', sans-serif; font-size:.78rem; color:{DUSK}; }}
-.note {{ color:{DUSK}; font-size:.82rem; margin-top:8px; }}
+.reelhead {{ display:grid; grid-template-columns: 96px 1fr; gap: 18px; align-items:start; margin-bottom: 16px; }}
+.reelhead img, .reelhead .noimg {{ width:96px; aspect-ratio: 4/5; object-fit:cover; background: linear-gradient(180deg, #1C2620, #0F1612); }}
+.reelhead .when {{ color:{STONE}; font-size:.9rem; }}
+.reelhead .cap {{ margin: 6px 0 8px; overflow-wrap:anywhere; }}
+table.ms {{ width:100%; border-collapse: collapse; table-layout: fixed; }}
+table.ms th, table.ms td {{ padding: 9px 6px; border-bottom: 1px solid {RULE_C}; text-align:right; }}
+table.ms thead th {{ color:{STONE}; font-weight:500; font-size:.82rem; vertical-align:bottom; }}
+table.ms tbody th {{ text-align:left; font-weight:400; color:{MIST}; }}
+table.ms th:first-child {{ width: 34%; padding-left: 0; }}
+table.ms td {{ font-size: 1.15rem; font-weight: 700; letter-spacing: -.03em; color:{MIST}; }}
+table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacing: 0; }}
+.note {{ color:{STONE}; font-size:.82rem; margin-top:10px; }}
 
-/* Calendar day list */
-.daycard {{ display:grid; grid-template-columns: 84px 1fr; gap: 14px; padding: 12px; margin-bottom: 4px; }}
-.daycard img, .daycard .noimg {{ width:84px; aspect-ratio:4/5; object-fit:cover; border:1px solid {LINE};
-    background: radial-gradient(60% 50% at 30% 30%, {SAND}, transparent 70%), radial-gradient(70% 60% at 75% 70%, {SAGE}, transparent 70%), {FERN}; }}
-.daycard .when {{ color:{DUSK}; font-size:.85rem; }}
-.daycard .cap {{ margin-top: 4px; line-height:1.4; overflow-wrap:anywhere; }}
-.daycard .stats {{ margin-top: 8px; color:{DUSK}; font-size:.88rem; }}
-.daycard .stats b {{ color:{MOSS}; font-weight:500; }}
-.cal-legend {{ display:flex; gap: 14px; align-items:center; color:{DUSK}; font-size:.88rem; flex-wrap: wrap; margin: 4px 0 10px; }}
-.cal-legend i {{ display:inline-block; width:14px; height:14px; margin-right:6px; vertical-align:-2px; border:1px solid {LINE}; }}
-.summary {{ display:flex; flex-wrap:wrap; gap: 8px 28px; color:{DUSK}; margin: 2px 0 14px; }}
-.summary b {{ font-family:'{FONT_DISPLAY}', serif; font-size:1.5rem; color:{MOSS}; font-weight:400; margin-right:6px; }}
+/* Calendar day list & summaries */
+.daycard {{ display:grid; grid-template-columns: 84px 1fr; gap: 16px; padding: 14px 0; background: none !important; border: 0 !important; border-bottom: 1px solid {RULE_C} !important; }}
+.daycard img, .daycard .noimg {{ width:84px; aspect-ratio:4/5; object-fit:cover; background: linear-gradient(180deg, #1C2620, #0F1612); }}
+.daycard .when {{ color:{STONE}; font-size:.85rem; }}
+.daycard .cap {{ margin-top: 4px; overflow-wrap:anywhere; }}
+.daycard .stats {{ margin-top: 8px; color:{STONE}; font-size:.88rem; }}
+.daycard .stats b {{ color:{MIST}; font-weight:700; }}
+.cal-legend {{ display:flex; gap: 16px; align-items:center; color:{STONE}; font-size:.85rem; flex-wrap: wrap; margin: 4px 0 10px; }}
+.cal-legend i {{ display:inline-block; width:12px; height:12px; margin-right:6px; vertical-align:-1px; }}
+.summary {{ display:flex; flex-wrap:wrap; gap: 6px 32px; color:{STONE}; margin: 14px 0; }}
+.summary b {{ font-size:1.6rem; font-weight:700; letter-spacing:-.04em; color:{MIST}; margin-right:6px; }}
 
-/* Reel list (replaces the wide table) */
-.rl {{ display:grid; grid-template-columns: 1fr repeat(4, 5.2rem); gap: 0 10px; align-items:center;
-       padding: 10px 14px; border-bottom: 1px solid {LINE}; font-variant-numeric: tabular-nums; }}
-.rl.head {{ color:{DUSK}; font-size:.85rem; }}
+/* Reel list */
+.rl {{ display:grid; grid-template-columns: 1fr repeat(4, 5.2rem); gap: 0 12px; align-items:center;
+       padding: 12px 16px; border-bottom: 1px solid {RULE_C}; }}
+.rl.head {{ color:{STONE}; font-size:.82rem; font-weight: 500; }}
 .rl .t {{ overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }}
-.rl .t small {{ color:{DUSK}; display:block; }}
+.rl .t small {{ color:{STONE}; display:block; }}
 .rl .n {{ text-align:right; }}
-.rl .trial {{ font-size:.75rem; border:1px solid {SAND}; color:{BARK}; padding:1px 6px; margin-left:6px; }}
+.rl .trial {{ font-size:.72rem; font-weight: 600; background:{LAMP}; color:{ABYSS}; padding:1px 6px; margin-left:8px; }}
 
 @media (max-width: 760px) {{
+  .hero {{ grid-template-columns: 1fr; }}
+  .hero .count {{ order: 0; text-align: left; padding-bottom: 22px; }}
+  .board {{ grid-template-columns: repeat(2, 1fr); }}
+  .board > div:nth-child(3) {{ border-left:none; padding-left: 0; }}
+  .board > div:nth-child(n+3) {{ border-top: 1px solid {RULE_C}; }}
+  .reels {{ grid-template-columns: repeat(2, minmax(0,1fr)); gap: 22px 12px; }}
+  .bars .row {{ grid-template-columns: 7rem 1fr 2.8rem; }}
   .rl {{ grid-template-columns: 1fr 4.4rem 4.4rem; }}
   .rl .hide-sm {{ display:none; }}
-  table.ms th, table.ms td {{ padding: 7px 3px; font-size:.85rem; }}
-  table.ms td {{ font-size: 1.02rem; }}
-  .stApp::after {{ inset: 8px; }}
-  .hero {{ grid-template-columns: 1fr; }}
-  .hero .count {{ border-right:1px solid {LINE}; border-bottom:none; }}
-  .hero .count .n {{ font-size: 4.6rem; }}
-  .hero .id h1 {{ font-size: 2.6rem !important; }}
-  .script {{ font-size: 3.2rem; margin-left: 10px; }}
-  .board {{ grid-template-columns: repeat(2, 1fr); }}
-  .board > div:nth-child(3) {{ border-left:none; }}
-  .board > div:nth-child(n+3) {{ border-top: 1px solid {LINE}; }}
-  .reels {{ grid-template-columns: repeat(2, 1fr); gap: 12px; }}
-  .bars .row {{ grid-template-columns: 7.5rem 1fr 2.8rem; }}
+  table.ms th, table.ms td {{ padding: 8px 3px; font-size:.82rem; }}
+  table.ms td {{ font-size: .98rem; }}
 }}
-@media (prefers-reduced-transparency: reduce) {{ .glass {{ background: rgba(239,231,216,.95); }} }}
 </style>""", unsafe_allow_html=True)
 
 
 def chart_theme():
     def theme():
+        f = f"{FONT}, Helvetica Neue, Arial, sans-serif"
         return {"config": {
-            "font": f"{FONT}, Helvetica, Arial, sans-serif", "background": "transparent", "padding": 16, "autosize": {"type": "fit", "contains": "padding"},
+            "font": f, "background": "transparent", "padding": 16, "autosize": {"type": "fit", "contains": "padding"},
             "view": {"stroke": None},
-            "axis": {"labelColor": DUSK, "titleColor": DUSK, "gridColor": "rgba(255,252,245,.8)",
-                     "domainColor": "rgba(255,252,245,.9)", "tickColor": "rgba(255,252,245,.9)",
-                     "labelFontSize": 12, "titleFontSize": 12, "titleFontWeight": 400, "labelFont": f"{FONT}, Helvetica, sans-serif", "titleFont": f"{FONT}, Helvetica, sans-serif"},
-            "legend": {"labelColor": BARK, "titleColor": DUSK, "labelFont": f"{FONT}, Helvetica, sans-serif", "labelLimit": 260},
-            "range": {"category": [MOSS, SAND, SAGE, "#A68B66", FERN]},
+            "axis": {"labelColor": STONE, "titleColor": STONE, "gridColor": "rgba(211,219,207,.10)",
+                     "domainColor": "rgba(211,219,207,.2)", "tickColor": "rgba(211,219,207,.2)",
+                     "labelFontSize": 12, "titleFontSize": 12, "titleFontWeight": 500, "labelFont": f, "titleFont": f},
+            "legend": {"labelColor": MIST, "titleColor": STONE, "labelFont": f, "labelLimit": 260},
+            "text": {"font": f},
+            "range": {"category": [FERNB, LAMP, MOSSD, "#B7C9A8", STONE]},
         }}
-    alt.themes.register("bloom", theme)
-    alt.themes.enable("bloom")
+    alt.themes.register("overgrown", theme)
+    alt.themes.enable("overgrown")
 
 
 # ---------------- private pages ----------------

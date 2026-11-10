@@ -28,7 +28,9 @@ t["date"] = t["posted_at"].dt.date
 months = pd.period_range(t["posted_at"].min().to_period("M"), pd.Timestamp.today().to_period("M"), freq="M")[::-1]
 f1, f2 = st.columns(2)
 month = f1.selectbox("Month", months, format_func=lambda p: p.strftime("%B %Y"))
-value = f2.selectbox("Number on each day", ["Views", "Engagement rate", "Likes", "Shares", "Reels posted"])
+has_views = t["views"].notna().any()
+value = f2.selectbox("Number on each day", (["Views", "Engagement rate"] if has_views else [])
+                     + ["Likes", "Comments"] + (["Shares"] if has_views else []) + ["Reels posted"])
 with st.expander("More filters"):
     f3, f4 = st.columns(2)
     kind = f3.selectbox("Reel type", ["All reels", "Regular reels", "Trial reels"])
@@ -53,6 +55,7 @@ grid["week"] = [(d.day - 1 + offset) // 7 for d in grid["date"]]
 grid["day"] = [str(d.day) for d in grid["date"]]
 
 agg = ft.groupby("date").agg(posts=("id", "size"), views=("views", "sum"), likes=("likes", "sum"),
+                             comments=("comments", "sum"),
                              shares=("shares", "sum"), inter=("total_interactions", "sum")).reset_index()
 grid = grid.merge(agg, on="date", how="left").fillna({"posts": 0})
 grid["posts"] = grid["posts"].astype(int)
@@ -68,6 +71,8 @@ def label(r):
         return f"{r['inter'] / r['views']:.0%}" if r["views"] else ""
     if value == "Likes":
         return fmt_num(r["likes"])
+    if value == "Comments":
+        return fmt_num(r["comments"])
     if value == "Shares":
         return fmt_num(r["shares"])
     return str(r["posts"])
@@ -84,22 +89,22 @@ base = alt.Chart(grid).encode(
             axis=alt.Axis(orient="top", labelAngle=0, ticks=False, domain=False, labelPadding=8)),
     y=alt.Y("week:O", title=None, axis=None, scale=alt.Scale(paddingInner=0.08)),
 )
-cells = base.mark_rect(cornerRadius=2, stroke="rgba(255,252,245,.9)").encode(
-    color=alt.Color("level:O", scale=alt.Scale(domain=[0, 1, 2, 3], range=[OAT, FERN, SAGE, MOSS]), legend=None),
+cells = base.mark_rect(cornerRadius=2, stroke="#0E1411").encode(
+    color=alt.Color("level:O", scale=alt.Scale(domain=[0, 1, 2, 3], range=["#18211C", FERN, SAGE, MOSS]), legend=None),
     strokeWidth=alt.condition(pick, alt.value(1), alt.value(1)),
     opacity=alt.condition("datum.is_future", alt.value(0.45), alt.value(1)),
     tooltip=[alt.Tooltip("date:T", title="Date", format="%a %b %-d"), alt.Tooltip("posts:Q", title="Reels"),
              alt.Tooltip("views:Q", title="Views", format=",")],
 ).add_params(pick)
 day_num = base.mark_text(dy=-11, fontSize=11).encode(
-    text="day:N", color=alt.condition("datum.level >= 2", alt.value("#F6F1E6"), alt.value(DUSK)))
+    text="day:N", color=alt.condition("datum.level >= 3", alt.value("#2A3527"), alt.value(DUSK)))
 val = base.mark_text(dy=8, fontSize=15, fontWeight=500).encode(
-    text="label:N", color=alt.condition("datum.level >= 2", alt.value("#FFFDF8"), alt.value(BARK)))
+    text="label:N", color=alt.condition("datum.level >= 3", alt.value("#0E1411"), alt.value(BARK)))
 n_weeks = grid["week"].max() + 1
 chart = (cells + day_num + val).properties(height=62 * n_weeks)
 
 st.markdown(f"""<div class="cal-legend">Reels posted:
-  <span><i style="background:{OAT}"></i>0</span><span><i style="background:{FERN}"></i>1</span>
+  <span><i style="background:#18211C"></i>0</span><span><i style="background:{FERN}"></i>1</span>
   <span><i style="background:{SAGE}"></i>2</span><span><i style="background:{MOSS}"></i>3+</span></div>""",
             unsafe_allow_html=True)
 event = st.altair_chart(chart, width="stretch", on_select="rerun", selection_mode="day", key=f"cal_{month}")
@@ -107,7 +112,7 @@ event = st.altair_chart(chart, width="stretch", on_select="rerun", selection_mod
 mt = ft[(ft["posted_at"].dt.year == month.year) & (ft["posted_at"].dt.month == month.month)]
 active = (grid["posts"] > 0).sum()
 st.markdown(f"""<div class="summary"><span><b>{len(mt)}</b>reels this month</span>
-  <span><b>{active}</b>days posted</span><span><b>{fmt_num(mt['views'].sum())}</b>views to date</span></div>""",
+  <span><b>{active}</b>days posted</span><span><b>{fmt_num(mt['views' if has_views else 'likes'].sum())}</b>{'views' if has_views else 'likes'} to date</span></div>""",
             unsafe_allow_html=True)
 
 # ---------------- selected day ----------------
@@ -124,12 +129,12 @@ if reels.empty:
 
 for _, r in reels.iterrows():
     thumb = r["thumbnail_url"] if isinstance(r["thumbnail_url"], str) and r["thumbnail_url"] else None
-    img = f'<img src="{html.escape(thumb)}" alt="">' if thumb else '<div class="noimg"></div>'
+    img = f'<img src="{html.escape(thumb)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' if thumb else '<div class="noimg"></div>'
     cap = html.escape(r["caption"] or "No caption")
     st.markdown(f"""<div class="daycard glass">{img}<div>
         <div class="when">{r['posted_at']:%-I:%M %p}{', trial reel' if r['is_trial'] else ''}</div>
         <div class="cap">{cap}</div>
-        <div class="stats"><b>{fmt_num(r['views'])}</b> views &nbsp; <b>{r['engagement_rate']:.1%}</b> engagement</div>
+        <div class="stats">{f"<b>{fmt_num(r['views'])}</b> views &nbsp; <b>{r['engagement_rate']:.1%}</b> engagement" if has_views else f"<b>{fmt_num(r['likes'])}</b> likes &nbsp; <b>{fmt_num(r['comments'])}</b> comments"}</div>
         </div></div>""", unsafe_allow_html=True)
     if st.button("View analytics", key=f"open_{r['id']}"):
         reel_dialog(r["id"])

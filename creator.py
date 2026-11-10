@@ -58,7 +58,7 @@ bucket = pd.cut(settled["posted_at"].dt.hour, [-1, 10, 14, 18, 24],
 when = (settled.assign(day=settled["posted_at"].dt.day_name().str[:3], slot=bucket)
         .groupby(["day", "slot"], observed=True)["views"].agg(["median", "count"]).reset_index())
 days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-heat = alt.Chart(when).mark_rect(stroke="rgba(255,252,245,.9)", strokeWidth=2).encode(
+heat = alt.Chart(when).mark_rect(stroke="#0E1411", strokeWidth=2).encode(
     x=alt.X("day:N", sort=days, title=None, scale=alt.Scale(domain=days), axis=alt.Axis(labelAngle=0)),
     y=alt.Y("slot:N", sort=["Morning", "Midday", "Afternoon", "Evening"], title=None),
     color=alt.Color("median:Q", scale=alt.Scale(range=[FERN, MOSS]), legend=None),
@@ -81,7 +81,7 @@ if not tags.empty:
     bars = alt.Chart(tg).mark_bar(color=SAGE).encode(
         x=alt.X("avg_views:Q", title="Average views", axis=alt.Axis(format="~s")),
         y=alt.Y("hashtags:N", sort="-x", title=None, axis=alt.Axis(labelOverlap=False, labelFontSize=13)),
-        color=alt.condition(alt.datum.avg_views > avg_all, alt.value(MOSS), alt.value(SAND)),
+        color=alt.condition(alt.datum.avg_views > avg_all, alt.value(MOSS), alt.value(SAGE)),
         tooltip=["hashtags", alt.Tooltip("avg_views:Q", format=",.0f"), "reels",
                  alt.Tooltip("engagement:Q", format=".1%")],
     )
@@ -97,7 +97,7 @@ with a:
                 'Top left is best.</p>', unsafe_allow_html=True)
     hook = settled.dropna(subset=["avg_watch_s", "skip_rate"]).reset_index()
     if not hook.empty:
-        sc = alt.Chart(hook).mark_circle(opacity=.8, stroke="#FFFDF8", strokeWidth=1).encode(
+        sc = alt.Chart(hook).mark_circle(opacity=.8, stroke="#0E1411", strokeWidth=1).encode(
             x=alt.X("skip_rate:Q", title="Skip rate", axis=alt.Axis(format="%")),
             y=alt.Y("avg_watch_s:Q", title="Avg watch time (s)"),
             size=alt.Size("views:Q", legend=None, scale=alt.Scale(range=[40, 600])),

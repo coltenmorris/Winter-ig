@@ -24,6 +24,7 @@ const thumb = (r, badge = "") =>
   `<div class="thumb">${r.thumb ? `<img src="${esc(r.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${badge}</div>`;
 
 function mark(nav) {
+  const n = document.querySelector("nav.top"); if (n && D.profile.username) n.dataset.handle = "@" + D.profile.username;
   document.querySelectorAll("nav.top a").forEach(a => { if (a.dataset.p === nav) a.setAttribute("aria-current", "page"); });
 }
 
@@ -36,10 +37,10 @@ function lineChart(points, { w = 520, h = 200, area = true } = {}) {
   const X = x => pad.l + (x - x0) / ((x1 - x0) || 1) * (w - pad.l - pad.r);
   const Y = y => h - pad.b - (y - y0) / ((y1 - y0) || 1) * (h - pad.t - pad.b);
   const d = points.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
-  const grid = [0, .5, 1].map(f => { const v = y0 + f * (y1 - y0); return `<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="rgba(255,252,245,.9)"/><text x="${pad.l - 6}" y="${Y(v) + 4}" text-anchor="end">${fmt(v)}</text>`; }).join("");
-  const fill = area ? `<path d="${d}L${X(x1)},${h - pad.b}L${X(x0)},${h - pad.b}Z" fill="rgba(79,93,67,.14)"/>` : "";
-  return `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img">${grid}${fill}<path d="${d}" fill="none" stroke="#4F5D43" stroke-width="2.2"/>
-    ${points.map(p => `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="2.6" fill="#4F5D43"/>`).join("")}</svg>`;
+  const grid = [0, .5, 1].map(f => { const v = y0 + f * (y1 - y0); return `<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="rgba(211,219,207,.12)"/><text x="${pad.l - 6}" y="${Y(v) + 4}" text-anchor="end">${fmt(v)}</text>`; }).join("");
+  const fill = area ? `<path d="${d}L${X(x1)},${h - pad.b}L${X(x0)},${h - pad.b}Z" fill="rgba(143,175,120,.10)"/>` : "";
+  return `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img">${grid}${fill}<path d="${d}" fill="none" stroke="#8FAF78" stroke-width="2"/>
+    ${points.map(p => `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="2.6" fill="#8FAF78"/>`).join("")}</svg>`;
 }
 
 // ---------- reel detail ----------

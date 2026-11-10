@@ -68,8 +68,8 @@ if (keys.length) {
   if (demo.gender) {
     const g = demo.gender, t = Object.values(g).reduce((s, x) => s + x, 0), m = (g.M || 0) / t, f = (g.F || 0) / t;
     html += `<h3 style="margin-top:18px">Gender</h3><div class="glass panel"><div style="display:flex;height:8px;margin:6px 0 10px">
-      <span style="width:${m * 100}%;background:var(--sage)"></span><span style="width:${f * 100}%;background:var(--sand)"></span><span style="flex:1;background:var(--fern)"></span></div>
-      <div class="na" style="font-size:.92rem">Men ${Math.round(m * 100)}% &nbsp; Women ${Math.round(f * 100)}%</div></div>`;
+      <span style="width:${m * 100}%;background:var(--fern)"></span><span style="width:${f * 100}%;background:var(--moss)"></span><span style="flex:1;background:var(--ivy)"></span></div>
+      <div class="na" style="font-size:.92rem;color:var(--stone)">Men ${Math.round(m * 100)}% &nbsp; Women ${Math.round(f * 100)}%</div></div>`;
   }
   html += `</div><div>`;
   if (demo.city) html += `<h3>Top cities</h3>` + bars(demo.city);

@@ -10,7 +10,7 @@
 <body>
 <div class="wrap">
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
-  <h1 style="font-size:3rem;letter-spacing:.04em">Creator analytics</h1>
+  <h1 style="font-size:clamp(2.6rem,7vw,5rem);line-height:.92;letter-spacing:-.05em">Creator analytics</h1>
   <p class="lede" id="updated"></p>
   <div id="warn"></div>
   <section class="kpis glass" id="kpis"></section>
@@ -23,7 +23,7 @@
     <label class="f">Reel type<select id="kind"><option value="all">All reels</option><option value="reg">Regular reels</option><option value="trial">Trial reels</option></select></label>
     <label class="f">Hashtag<select id="tag"><option value="">Any hashtag</option></select></label>
   </div>
-  <div class="legend">Reels posted: <span><i style="background:rgba(239,231,216,.55)"></i>0</span><span><i style="background:var(--fern)"></i>1</span><span><i style="background:var(--sage)"></i>2</span><span><i style="background:var(--moss)"></i>3+</span></div>
+  <div class="legend">Reels posted: <span><i style="background:rgba(36,48,42,.45)"></i>0</span><span><i style="background:#2E4030"></i>1</span><span><i style="background:var(--moss)"></i>2</span><span><i style="background:var(--fern)"></i>3+</span></div>
   <div class="cal glass"><div class="dows"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div><div class="grid" id="grid"></div></div>
   <div class="summary" id="msum"></div>
   <div id="dayview"><p class="lede">Tap a day on the calendar to see its reels.</p></div>
@@ -148,23 +148,23 @@ const cellsWk = {}; settled.forEach(r => {
   const si = slots.findIndex(([, a, b]) => h >= a && h < b); (cellsWk[`${di}-${si}`] ||= []).push(val(r));
 });
 const meds = Object.values(cellsWk).map(med), hi = Math.max(...meds, 1), lo = Math.min(...meds, 0);
-$("wklede").textContent = `Median ${MAIN_LABEL} by when you posted (Eastern time). Darker did better; blank means you haven't posted then.`;
+$("wklede").textContent = `Median ${MAIN_LABEL} by when you posted (Eastern time). Brighter did better; blank means you haven't posted then.`;
 $("wk").innerHTML = `<div class="wk"><span></span>${dows.map(d => `<span class="h">${d}</span>`).join("")}${slots.map(([name], si) =>
   `<span>${name}</span>` + dows.map((_, di) => {
     const v = cellsWk[`${di}-${si}`]; if (!v) return `<span class="c"></span>`;
     const m = med(v), t = (m - lo) / ((hi - lo) || 1);
-    const bg = `color-mix(in srgb, #4F5D43 ${Math.round(15 + t * 85)}%, #C9D2B8)`;
-    return `<span class="c" style="background:${bg};color:${t > .45 ? "#FFFDF8" : "var(--bark)"}" title="${v.length} reels">${fmt(m)}</span>`;
+    const bg = `color-mix(in srgb, #8FAF78 ${Math.round(10 + t * 90)}%, #1E2923)`;
+    return `<span class="c" style="background:${bg};color:${t > .6 ? "#0E1411" : "var(--mist)"}" title="${v.length} reels">${fmt(m)}</span>`;
   }).join("")).join("")}</div>`;
 
 // ---------- hashtags ----------
 const agg = {}; settled.forEach(r => r.tags.forEach(t => (agg[t] ||= []).push(val(r))));
 const overall = avg(settled.map(r => val(r)));
 const rows = Object.entries(agg).filter(([, v]) => v.length >= 2).map(([t, v]) => [t, avg(v), v.length]).sort((a, b) => b[1] - a[1]).slice(0, 12);
-$("tglede").textContent = `Average ${MAIN_LABEL} per reel for hashtags you've used at least twice. Your overall average is ${fmt(overall)}; green beats it.`;
+$("tglede").textContent = `Average ${MAIN_LABEL} per reel for hashtags you've used at least twice. Your overall average is ${fmt(overall)}; brighter bars beat it.`;
 const peak = Math.max(...rows.map(r => r[1]), 1);
 $("tags").innerHTML = rows.length ? rows.map(([t, a, n]) => `<div class="row"><span class="lbl">#${esc(t)}</span>
-  <span class="track"><span class="fill" style="display:block;width:${(a / peak * 100).toFixed(1)}%;${a < overall ? "background:var(--sand)" : ""}"></span></span>
+  <span class="track"><span class="fill" style="display:block;width:${(a / peak * 100).toFixed(1)}%;${a < overall ? "background:var(--moss)" : ""}"></span></span>
   <span class="pct">${fmt(a)}</span></div>`).join("") : `<p class="lede">Use hashtags on a few reels to compare topics.</p>`;
 
 // ---------- all reels ----------
