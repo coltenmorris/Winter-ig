@@ -1,8 +1,15 @@
-"""Small client for the Instagram API with Instagram Login (graph.instagram.com)."""
+"""Small client for the Instagram API.
+
+Works with both kinds of token Meta hands out:
+- Instagram Login tokens (start with "IG") -> graph.instagram.com, account "me"
+- Facebook / Unified login tokens (usually "EAA...") -> graph.facebook.com, using the
+  Instagram account ID found through your Pages or business portfolio
+"""
 import os
 import requests
 
-BASE = "https://graph.instagram.com"
+IG_HOST = "https://graph.instagram.com"
+FB_HOST = "https://graph.facebook.com"
 API_VERSION = os.getenv("IG_API_VERSION", "v26.0")
 
 # Metrics we try to pull for every video. Instagram rejects the whole request if
@@ -40,9 +47,12 @@ class InstagramClient:
             raise InstagramError("No access token set. Add IG_ACCESS_TOKEN to your .env file.")
         self.token = token
         self.version = version
+        self.host = None   # set by connect()
+        self.uid = "me"    # Instagram account ID ("me" on graph.instagram.com)
 
-    def _get(self, path: str, params: dict | None = None, versioned: bool = True) -> dict:
-        url = f"{BASE}/{self.version}/{path}" if versioned else f"{BASE}/{path}"
+    def _get(self, path: str, params: dict | None = None, versioned: bool = True, host: str | None = None) -> dict:
+        base = host or self.host or IG_HOST
+        url = f"{base}/{self.version}/{path}" if versioned else f"{base}/{path}"
         params = dict(params or {})
         params["access_token"] = self.token
         r = requests.get(url, params=params, timeout=30)
@@ -52,20 +62,74 @@ class InstagramClient:
             raise InstagramError(msg)
         return data
 
+    # ---- connection ----
+    def connect(self) -> str:
+        """Work out which API this token belongs to and which Instagram account to read."""
+        if self.host:
+            return self.host
+        errors = []
+        if self.token.startswith("IG"):
+            order = [IG_HOST, FB_HOST]
+        else:
+            order = [FB_HOST, IG_HOST]
+        for host in order:
+            try:
+                if host == IG_HOST:
+                    self._get("me", {"fields": "user_id,username"}, host=IG_HOST)
+                    self.host, self.uid = IG_HOST, "me"
+                    return host
+                self.uid = self._find_fb_ig_account()
+                self.host = FB_HOST
+                return host
+            except InstagramError as e:
+                errors.append(f"{host.split('//')[1]}: {e}")
+        raise InstagramError("Couldn't connect with this token. " + " | ".join(errors))
+
+    def _find_fb_ig_account(self) -> str:
+        # 1) Token issued directly for the Instagram account
+        try:
+            me = self._get("me", {"fields": "id,username"}, host=FB_HOST)
+            if me.get("username"):
+                return me["id"]
+        except InstagramError:
+            pass
+        # 2) Instagram account linked to one of your Facebook Pages
+        try:
+            pages = self._get("me/accounts", {"fields": "instagram_business_account{id,username}"}, host=FB_HOST)
+            for p in pages.get("data", []):
+                if p.get("instagram_business_account"):
+                    return p["instagram_business_account"]["id"]
+        except InstagramError:
+            pass
+        # 3) Instagram account added to your business portfolio
+        biz = self._get("me", {"fields": "businesses{instagram_business_accounts{id,username},"
+                                          "owned_instagram_accounts{id,username}}"}, host=FB_HOST)
+        for b in biz.get("businesses", {}).get("data", []):
+            for key in ("instagram_business_accounts", "owned_instagram_accounts"):
+                accts = b.get(key, {}).get("data", [])
+                if accts:
+                    return accts[0]["id"]
+        raise InstagramError("Token works, but no Instagram account was found on it. Make sure your "
+                             "Instagram pro account is connected to the Winter Colten business portfolio "
+                             "and that you approved instagram_basic and instagram_manage_insights.")
+
     # ---- account ----
     def me(self) -> dict:
-        base = "user_id,username,account_type,followers_count,follows_count,media_count"
+        self.connect()
+        base = "username,followers_count,follows_count,media_count"
         try:
-            return self._get("me", {"fields": base + ",name,biography,profile_picture_url"})
+            d = self._get(self.uid, {"fields": base + ",name,biography,profile_picture_url"})
         except InstagramError:
-            return self._get("me", {"fields": base})
+            d = self._get(self.uid, {"fields": base})
+        d["api"] = "Instagram Login" if self.host == IG_HOST else "Facebook/Unified login"
+        return d
 
     def account_daily(self) -> dict:
         """Yesterday's account-wide totals (reach, views, accounts engaged, interactions)."""
         out = {}
         for m in ["reach", "views", "accounts_engaged", "total_interactions"]:
             try:
-                out.update(self._parse(self._get("me/insights", {
+                out.update(self._parse(self._get(f"{self.uid}/insights", {
                     "metric": m, "period": "day", "metric_type": "total_value"})))
             except InstagramError:
                 pass
@@ -76,7 +140,7 @@ class InstagramClient:
         out = {}
         for b in ["age", "gender", "country", "city"]:
             try:
-                resp = self._get("me/insights", {
+                resp = self._get(f"{self.uid}/insights", {
                     "metric": "follower_demographics", "period": "lifetime",
                     "metric_type": "total_value", "timeframe": "this_month", "breakdown": b})
                 rows = resp["data"][0]["total_value"]["breakdowns"][0]["results"]
@@ -87,15 +151,16 @@ class InstagramClient:
 
     # ---- media ----
     def list_media(self, limit: int | None = None) -> list[dict]:
+        self.connect()
         fields = list(MEDIA_FIELDS)
         items: list[dict] = []
         try:
-            page = self._get("me/media", {"fields": ",".join(fields), "limit": 50})
+            page = self._get(f"{self.uid}/media", {"fields": ",".join(fields), "limit": 50})
         except InstagramError as e:
             # Some fields are only available on certain login types; retry without them.
             if "media_product_type" in str(e) or "nonexisting field" in str(e).lower():
                 fields.remove("media_product_type")
-                page = self._get("me/media", {"fields": ",".join(fields), "limit": 50})
+                page = self._get(f"{self.uid}/media", {"fields": ",".join(fields), "limit": 50})
             else:
                 raise
         while True:
@@ -137,6 +202,10 @@ class InstagramClient:
     # ---- token ----
     def refresh_token(self) -> str:
         """Extend the long-lived token another 60 days. Token must be at least 24h old."""
-        data = self._get("refresh_access_token", {"grant_type": "ig_refresh_token"}, versioned=False)
+        self.connect()
+        if self.host != IG_HOST:
+            raise InstagramError("automatic refresh only works for Instagram Login tokens; "
+                                 "generate a new token in the Meta dashboard before it expires")
+        data = self._get("refresh_access_token", {"grant_type": "ig_refresh_token"}, versioned=False, host=IG_HOST)
         self.token = data["access_token"]
         return self.token

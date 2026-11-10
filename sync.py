@@ -36,11 +36,8 @@ def describe_token(tok: str) -> str:
     """Safe hint for debugging: never prints the token itself."""
     if not tok:
         return "No token found. Check the secret is named exactly IG_ACCESS_TOKEN."
-    hint = f"Token is {len(tok)} characters and starts with '{tok[:4]}'."
-    if not tok.startswith("IG"):
-        hint += (" Instagram Login tokens start with 'IG'. This may be the App Secret, App ID, "
-                 "or a Facebook token. Copy the token from 'Generate access tokens' instead.")
-    elif len(tok) < 100:
+    hint = f"Token is {len(tok)} characters and starts with '{tok[:3]}'."
+    if len(tok) < 60:
         hint += " That's shorter than expected; part of it may be missing."
     return hint
 
@@ -94,7 +91,7 @@ def run_sync(log=print, include_photos: bool = False) -> int:
     yesterday = (date.today() - timedelta(days=1)).isoformat()
     db.upsert_account_daily(conn, yesterday, client.account_daily())
     db.replace_demographics(conn, today, client.demographics())
-    log(f"Connected as @{me.get('username')} ({me.get('followers_count')} followers)")
+    log(f"Connected as @{me.get('username')} ({me.get('followers_count')} followers) via {me.get('api')}")
 
     media = client.list_media()
     videos = [m for m in media if include_photos or m.get("media_type") == "VIDEO"]
