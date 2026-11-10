@@ -89,9 +89,17 @@ def build():
     conn.close()
 
     OUT.mkdir(exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
     for f in SRC.iterdir():
         if f.is_file():
-            shutil.copy2(f, OUT / f.name)
+            if f.suffix == ".html":
+                # Version the asset links so browsers fetch fresh data after each sync.
+                text = f.read_text()
+                for asset in ("data.js", "common.js", "style.css"):
+                    text = text.replace(f'"{asset}"', f'"{asset}?v={stamp}"')
+                (OUT / f.name).write_text(text)
+            else:
+                shutil.copy2(f, OUT / f.name)
     (OUT / ".nojekyll").touch()
     (OUT / "data.js").write_text("window.DATA = " + json.dumps(data, separators=(",", ":")) + ";\n")
     print(f"Built site with {len(reels)} reels into {OUT}")

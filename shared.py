@@ -37,8 +37,13 @@ def cfg(key: str, default: str = "") -> str:
 
 
 # ---------------- data ----------------
-@st.cache_data(ttl=300)
 def load():
+    # Re-read whenever the database file changes (e.g. after the daily sync is pulled in).
+    return _load(db.DB_PATH.stat().st_mtime if db.DB_PATH.exists() else 0)
+
+
+@st.cache_data(ttl=300)
+def _load(_mtime: float):
     conn = db.connect()
     q = lambda sql: pd.read_sql(sql, conn)
     media, snaps = q("SELECT * FROM media"), q("SELECT * FROM media_snapshots")
