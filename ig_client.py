@@ -88,6 +88,13 @@ class InstagramClient:
 
     def _find_fb_ig_account(self) -> str:
         tried = []
+        # 0) Page access token (never expires): the Page itself points to its Instagram account
+        try:
+            pg = self._get("me", {"fields": "instagram_business_account"}, host=FB_HOST)
+            if pg.get("instagram_business_account", {}).get("id"):
+                return pg["instagram_business_account"]["id"]
+        except InstagramError as e:
+            tried.append(f"page: {e}")
         # 1) Token issued directly for the Instagram account
         try:
             me = self._get("me", {"fields": "id,username"}, host=FB_HOST)
