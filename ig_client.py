@@ -86,32 +86,48 @@ class InstagramClient:
         raise InstagramError("Couldn't connect with this token. " + " | ".join(errors))
 
     def _find_fb_ig_account(self) -> str:
+        tried = []
         # 1) Token issued directly for the Instagram account
         try:
             me = self._get("me", {"fields": "id,username"}, host=FB_HOST)
             if me.get("username"):
                 return me["id"]
-        except InstagramError:
-            pass
-        # 2) Instagram account linked to one of your Facebook Pages
+        except InstagramError as e:
+            tried.append(f"account: {e}")
+        # 2) Instagram account linked to one of your Facebook Pages (needs pages_show_list)
         try:
             pages = self._get("me/accounts", {"fields": "instagram_business_account{id,username}"}, host=FB_HOST)
             for p in pages.get("data", []):
                 if p.get("instagram_business_account"):
                     return p["instagram_business_account"]["id"]
+        except InstagramError as e:
+            tried.append(f"pages: {e}")
+        # 3) Instagram account in your business portfolio (needs business_management)
+        try:
+            biz = self._get("me/businesses", {"fields": "instagram_business_accounts{id,username},"
+                                                       "owned_instagram_accounts{id,username}"}, host=FB_HOST)
+            for b in biz.get("data", []):
+                for key in ("instagram_business_accounts", "owned_instagram_accounts"):
+                    accts = b.get(key, {}).get("data", [])
+                    if accts:
+                        return accts[0]["id"]
+        except InstagramError as e:
+            tried.append(f"business portfolio: {e}")
+        raise InstagramError("No Instagram account reachable with this token ("
+                             + "; ".join(tried) + "). " + self._permission_report())
+
+    def _permission_report(self) -> str:
+        try:
+            perms = self._get("me/permissions", host=FB_HOST).get("data", [])
+            granted = sorted(p["permission"] for p in perms if p.get("status") == "granted")
         except InstagramError:
-            pass
-        # 3) Instagram account added to your business portfolio
-        biz = self._get("me", {"fields": "businesses{instagram_business_accounts{id,username},"
-                                          "owned_instagram_accounts{id,username}}"}, host=FB_HOST)
-        for b in biz.get("businesses", {}).get("data", []):
-            for key in ("instagram_business_accounts", "owned_instagram_accounts"):
-                accts = b.get(key, {}).get("data", [])
-                if accts:
-                    return accts[0]["id"]
-        raise InstagramError("Token works, but no Instagram account was found on it. Make sure your "
-                             "Instagram pro account is connected to the Winter Colten business portfolio "
-                             "and that you approved instagram_basic and instagram_manage_insights.")
+            return ""
+        needed = ["instagram_basic", "instagram_manage_insights", "pages_show_list", "business_management"]
+        missing = [p for p in needed if p not in granted]
+        out = f"Granted permissions: {', '.join(granted) or 'none'}."
+        if missing:
+            out += f" Missing: {', '.join(missing)}."
+        return out
 
     # ---- account ----
     def me(self) -> dict:
