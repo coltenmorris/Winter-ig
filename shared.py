@@ -1,4 +1,5 @@
 """Shared data loading, metrics, config and styling for both pages."""
+import html
 import os
 
 import altair as alt
@@ -184,7 +185,52 @@ a {{ color: {MOSS}; }}
 [data-testid="stVegaLiteChart"], [data-testid="stDataFrame"] {{ box-sizing: border-box; overflow: hidden; background:{GLASS}; border:1px solid {LINE}; padding:0; backdrop-filter: blur(14px); }}
 .stButton > button {{ border-radius: 0; border:1px solid {MOSS}; }}
 
+/* No sideways scrolling anywhere */
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{ overflow-x: hidden; max-width: 100vw; }}
+img {{ max-width: 100%; }}
+
+/* Reel pop-up */
+.reelhead {{ display:grid; grid-template-columns: 96px 1fr; gap: 16px; align-items:start; margin-bottom: 14px; }}
+.reelhead img, .reelhead .noimg {{ width:96px; aspect-ratio: 4/5; object-fit:cover; border:1px solid {LINE};
+    background: radial-gradient(60% 50% at 30% 30%, {SAND}, transparent 70%), radial-gradient(70% 60% at 75% 70%, {SAGE}, transparent 70%), {FERN}; }}
+.reelhead .when {{ color:{DUSK}; font-size:.9rem; }}
+.reelhead .cap {{ margin: 6px 0 8px; line-height:1.45; overflow-wrap:anywhere; }}
+table.ms {{ width:100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }}
+table.ms th, table.ms td {{ padding: 8px 6px; border-bottom: 1px solid {FERN}; text-align:right; font-size:.95rem; }}
+table.ms thead th {{ color:{DUSK}; font-weight:400; font-size:.85rem; vertical-align:bottom; }}
+table.ms tbody th {{ text-align:left; font-weight:400; color:{BARK}; }}
+table.ms th:first-child {{ width: 34%; }}
+table.ms td {{ font-family:'{FONT_DISPLAY}', serif; font-size: 1.2rem; color:{MOSS}; }}
+table.ms .na {{ font-family:'{FONT}', sans-serif; font-size:.78rem; color:{DUSK}; }}
+.note {{ color:{DUSK}; font-size:.82rem; margin-top:8px; }}
+
+/* Calendar day list */
+.daycard {{ display:grid; grid-template-columns: 84px 1fr; gap: 14px; padding: 12px; margin-bottom: 4px; }}
+.daycard img, .daycard .noimg {{ width:84px; aspect-ratio:4/5; object-fit:cover; border:1px solid {LINE};
+    background: radial-gradient(60% 50% at 30% 30%, {SAND}, transparent 70%), radial-gradient(70% 60% at 75% 70%, {SAGE}, transparent 70%), {FERN}; }}
+.daycard .when {{ color:{DUSK}; font-size:.85rem; }}
+.daycard .cap {{ margin-top: 4px; line-height:1.4; overflow-wrap:anywhere; }}
+.daycard .stats {{ margin-top: 8px; color:{DUSK}; font-size:.88rem; }}
+.daycard .stats b {{ color:{MOSS}; font-weight:500; }}
+.cal-legend {{ display:flex; gap: 14px; align-items:center; color:{DUSK}; font-size:.88rem; flex-wrap: wrap; margin: 4px 0 10px; }}
+.cal-legend i {{ display:inline-block; width:14px; height:14px; margin-right:6px; vertical-align:-2px; border:1px solid {LINE}; }}
+.summary {{ display:flex; flex-wrap:wrap; gap: 8px 28px; color:{DUSK}; margin: 2px 0 14px; }}
+.summary b {{ font-family:'{FONT_DISPLAY}', serif; font-size:1.5rem; color:{MOSS}; font-weight:400; margin-right:6px; }}
+
+/* Reel list (replaces the wide table) */
+.rl {{ display:grid; grid-template-columns: 1fr repeat(4, 5.2rem); gap: 0 10px; align-items:center;
+       padding: 10px 14px; border-bottom: 1px solid {LINE}; font-variant-numeric: tabular-nums; }}
+.rl.head {{ color:{DUSK}; font-size:.85rem; }}
+.rl .t {{ overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }}
+.rl .t small {{ color:{DUSK}; display:block; }}
+.rl .n {{ text-align:right; }}
+.rl .trial {{ font-size:.75rem; border:1px solid {SAND}; color:{BARK}; padding:1px 6px; margin-left:6px; }}
+
 @media (max-width: 760px) {{
+  .rl {{ grid-template-columns: 1fr 4.4rem 4.4rem; }}
+  .rl .hide-sm {{ display:none; }}
+  table.ms th, table.ms td {{ padding: 7px 3px; font-size:.85rem; }}
+  table.ms td {{ font-size: 1.02rem; }}
   .stApp::after {{ inset: 8px; }}
   .hero {{ grid-template-columns: 1fr; }}
   .hero .count {{ border-right:1px solid {LINE}; border-bottom:none; }}
@@ -214,3 +260,101 @@ def chart_theme():
         }}
     alt.themes.register("bloom", theme)
     alt.themes.enable("bloom")
+
+
+# ---------------- private pages ----------------
+def require_password(title: str):
+    pw = cfg("DASHBOARD_PASSWORD")
+    if pw and not st.session_state.get("authed"):
+        st.header(title)
+        st.markdown('<p class="lede">This page is private. Enter your dashboard password.</p>',
+                    unsafe_allow_html=True)
+        entered = st.text_input("Password", type="password")
+        if entered:
+            if entered == pw:
+                st.session_state["authed"] = True
+                st.rerun()
+            st.error("That password doesn't match DASHBOARD_PASSWORD.")
+        st.stop()
+
+
+def private_nav():
+    c = st.columns(3)
+    c[0].page_link("creator.py", label="Analytics")
+    c[1].page_link("calendar_page.py", label="Calendar")
+    c[2].page_link("media_kit.py", label="Media kit")
+
+
+# ---------------- per-reel analytics ----------------
+MILESTONE_METRICS = [("views", "Views"), ("reach", "Accounts reached"), ("likes", "Likes"),
+                     ("comments", "Comments"), ("shares", "Shares"), ("saved", "Saves"),
+                     ("engagement", "Engagement rate"), ("avg_watch_ms", "Avg watch time")]
+
+
+def milestones(snaps: pd.DataFrame, media_id: str, posted_at: pd.Timestamp) -> dict:
+    """Stats at ~24 hours, ~1 week, and the latest sync, from daily snapshots."""
+    s = snaps[snaps["media_id"] == media_id].sort_values("captured_date")
+    if s.empty:
+        return {}
+    s = s.assign(age=(s["captured_date"] - posted_at.normalize()).dt.days)
+    out = {}
+    for key, day, slack in (("24h", 1, 1), ("week", 7, 2)):
+        hit = s[s["age"] >= day]
+        out[key] = hit.iloc[0] if not hit.empty and hit.iloc[0]["age"] <= day + slack else None
+    out["total"] = s.iloc[-1]
+    out["series"] = s
+    return out
+
+
+def _cell(row, key):
+    if row is None:
+        return '<span class="na">not captured</span>'
+    if key == "engagement":
+        inter = row[["likes", "comments", "shares", "saved"]].fillna(0).sum()
+        tot = row["total_interactions"] if pd.notna(row["total_interactions"]) else inter
+        return f"{tot / row['views']:.1%}" if row["views"] else "n/a"
+    if key == "avg_watch_ms":
+        return f"{row[key] / 1000:.1f}s" if pd.notna(row[key]) else "n/a"
+    return fmt_num(row[key])
+
+
+@st.dialog("Reel analytics", width="large")
+def reel_dialog(media_id: str):
+    media, snaps, *_ = load()
+    m = media.set_index("id").loc[media_id]
+    thumb = m["thumbnail_url"] if isinstance(m["thumbnail_url"], str) and m["thumbnail_url"] else None
+    img = (f'<img src="{html.escape(thumb)}" alt="">' if thumb
+           else '<div class="noimg"></div>')
+    cap = html.escape(m["caption"] or "No caption")
+    link = f'<a href="{html.escape(m["permalink"])}" target="_blank" rel="noopener">Open on Instagram</a>' \
+        if isinstance(m["permalink"], str) else ""
+    st.markdown(f"""<div class="reelhead">{img}<div><div class="when">{m['posted_at']:%A, %B %-d at %-I:%M %p}</div>
+        <div class="cap">{cap}</div>{link}</div></div>""", unsafe_allow_html=True)
+
+    ms = milestones(snaps, media_id, m["posted_at"])
+    if not ms:
+        st.info("No stats yet. They appear after the next sync.")
+        return
+    rows = "".join(
+        f"<tr><th>{label}</th><td>{_cell(ms['24h'], k)}</td><td>{_cell(ms['week'], k)}</td>"
+        f"<td>{_cell(ms['total'], k)}</td></tr>" for k, label in MILESTONE_METRICS)
+    st.markdown(f"""<table class="ms"><thead><tr><th></th><th>First 24 hours</th><th>First week</th>
+        <th>To date</th></tr></thead><tbody>{rows}</tbody></table>
+        <p class="note">Taken from the daily sync closest to each mark. "Not captured" means the reel
+        was posted before tracking began or that mark hasn’t arrived yet.</p>""", unsafe_allow_html=True)
+
+    series = ms["series"]
+    if len(series) > 1:
+        line = alt.Chart(series).mark_line(point=alt.OverlayMarkDef(color=MOSS, size=40), color=MOSS, strokeWidth=2).encode(
+            x=alt.X("age:Q", title="Days since posting"),
+            y=alt.Y("views:Q", title="Views", axis=alt.Axis(format="~s")),
+            tooltip=[alt.Tooltip("captured_date:T", title="Date"), alt.Tooltip("views:Q", format=",")],
+        ).properties(height=200)
+        st.altair_chart(line, width="stretch")
+
+    trial = st.checkbox("Posted as a trial reel", value=bool(m["is_trial"]), key=f"trial_{media_id}")
+    if trial != bool(m["is_trial"]):
+        conn = db.connect()
+        db.set_trial(conn, media_id, trial)
+        conn.close()
+        st.cache_data.clear()

@@ -23,11 +23,33 @@ REFRESH_EVERY_DAYS = 7
 TOKEN_FILE = Path(__file__).with_name(".token")  # gitignored; never stored in the database
 
 
+def clean_token(raw: str) -> str:
+    """Forgive common paste mistakes: spaces, line breaks, quotes, or a 'NAME=' prefix."""
+    tok = "".join(raw.split())
+    for prefix in ("IG_ACCESS_TOKEN=", "access_token=", "Bearer"):
+        if tok.startswith(prefix):
+            tok = tok[len(prefix):]
+    return tok.strip("\"'")
+
+
+def describe_token(tok: str) -> str:
+    """Safe hint for debugging: never prints the token itself."""
+    if not tok:
+        return "No token found. Check the secret is named exactly IG_ACCESS_TOKEN."
+    hint = f"Token is {len(tok)} characters and starts with '{tok[:4]}'."
+    if not tok.startswith("IG"):
+        hint += (" Instagram Login tokens start with 'IG'. This may be the App Secret, App ID, "
+                 "or a Facebook token. Copy the token from 'Generate access tokens' instead.")
+    elif len(tok) < 100:
+        hint += " That's shorter than expected; part of it may be missing."
+    return hint
+
+
 def get_token(conn=None) -> str:
     # A refreshed token saved locally wins over the one in .env / GitHub secret.
     if TOKEN_FILE.exists():
-        return TOKEN_FILE.read_text().strip()
-    return os.getenv("IG_ACCESS_TOKEN", "")
+        return clean_token(TOKEN_FILE.read_text())
+    return clean_token(os.getenv("IG_ACCESS_TOKEN", ""))
 
 
 def save_token(new: str, log=print):
@@ -169,4 +191,7 @@ if __name__ == "__main__":
         try:
             run_sync(include_photos=a.include_photos)
         except InstagramError as e:
-            raise SystemExit(f"Instagram error: {e}")
+            msg = f"Instagram error: {e}"
+            if "token" in str(e).lower() or "oauth" in str(e).lower():
+                msg += "\n" + describe_token(get_token())
+            raise SystemExit(msg)

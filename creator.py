@@ -5,21 +5,14 @@ import streamlit as st
 
 import db
 from ig_client import InstagramError
-from shared import DUSK, FERN, MOSS, SAGE, SAND, cfg, fmt_num, load, video_table
+import html
+
+from shared import (DUSK, FERN, MOSS, SAGE, SAND, fmt_num, load, private_nav, reel_dialog,
+                    require_password, video_table)
 from sync import run_sync
 
-# ---------------- password gate ----------------
-pw = cfg("DASHBOARD_PASSWORD")
-if pw and not st.session_state.get("authed"):
-    st.header("Creator analytics")
-    st.markdown('<p class="lede">This page is private. Enter your dashboard password.</p>', unsafe_allow_html=True)
-    entered = st.text_input("Password", type="password")
-    if entered:
-        if entered == pw:
-            st.session_state["authed"] = True
-            st.rerun()
-        st.error("That password doesn't match DASHBOARD_PASSWORD.")
-    st.stop()
+require_password("Creator analytics")
+private_nav()
 
 # ---------------- sidebar ----------------
 with st.sidebar:
@@ -136,37 +129,34 @@ with b:
 # ---------------- trial vs regular ----------------
 if t["is_trial"].sum() > 0:
     st.markdown("## Trial reels vs regular reels")
-    comp = settled.assign(type=settled["is_trial"].map({1: "Trial reel", 0: "Regular reel"})).groupby("type").agg(
-        reels=("views", "size"), avg_views=("views", "mean"), engagement=("engagement_rate", "mean"),
-        watch_s=("avg_watch_s", "mean"), skip=("skip_rate", "mean"))
-    st.dataframe(comp, width="stretch", column_config={
-        "avg_views": st.column_config.NumberColumn("Avg views", format="%,.0f"),
-        "engagement": st.column_config.NumberColumn("Engagement", format="percent"),
-        "watch_s": st.column_config.NumberColumn("Avg watch (s)", format="%.1f"),
-        "skip": st.column_config.NumberColumn("Skip rate", format="percent")})
+    cols = st.columns(2)
+    for col, (flag, name) in zip(cols, [(0, "Regular reels"), (1, "Trial reels")]):
+        g = settled[settled["is_trial"] == flag]
+        if g.empty:
+            continue
+        col.markdown(f"""<div class="glass panel"><h3 style="margin-top:0">{name}</h3>
+          <div class="summary"><span><b>{len(g)}</b>reels</span><span><b>{fmt_num(g['views'].mean())}</b>avg views</span>
+          <span><b>{g['engagement_rate'].mean():.1%}</b>engagement</span>
+          <span><b>{g['avg_watch_s'].mean():.1f}s</b>avg watch</span></div></div>""", unsafe_allow_html=True)
 
-# ---------------- all videos ----------------
+# ---------------- all reels (no sideways scrolling) ----------------
 st.markdown("## All reels")
-st.markdown('<p class="lede">Tick Trial for reels you posted as trial reels.</p>', unsafe_allow_html=True)
-show = t.sort_values("posted_at", ascending=False).reset_index()[
-    ["id", "is_trial", "title", "posted_at", "views", "views_gained", "likes", "comments", "shares", "saved",
-     "engagement_rate", "avg_watch_s", "skip_rate", "permalink"]]
-show["is_trial"] = show["is_trial"].astype(bool)
-edited = st.data_editor(show, hide_index=True, width="stretch",
-                        disabled=[col for col in show.columns if col != "is_trial"],
-                        column_config={
-                            "id": None, "is_trial": st.column_config.CheckboxColumn("Trial"), "title": "Reel",
-                            "posted_at": st.column_config.DatetimeColumn("Posted", format="MMM D, h:mm a"),
-                            "views_gained": st.column_config.NumberColumn(f"+Views {window}d"),
-                            "engagement_rate": st.column_config.NumberColumn("Engagement", format="percent"),
-                            "avg_watch_s": st.column_config.NumberColumn("Watch (s)", format="%.1f"),
-                            "skip_rate": st.column_config.NumberColumn("Skip", format="percent"),
-                            "permalink": st.column_config.LinkColumn("Link", display_text="Open")})
-changed = edited[edited["is_trial"] != show["is_trial"]]
-if not changed.empty:
-    conn = db.connect()
-    for _, r in changed.iterrows():
-        db.set_trial(conn, r["id"], bool(r["is_trial"]))
-    conn.close()
-    st.cache_data.clear()
-    st.rerun()
+st.markdown('<p class="lede">Newest first. Pick a reel to see its first 24 hours, first week and totals, '
+            'or to mark it as a trial reel.</p>', unsafe_allow_html=True)
+order = t.sort_values("posted_at", ascending=False)
+choice = st.selectbox("Open a reel", order.index, index=None, placeholder="Choose a reel",
+                      format_func=lambda i: f"{order.loc[i, 'title']} ({order.loc[i, 'posted_at']:%b %-d})")
+if choice is not None:
+    reel_dialog(choice)
+
+rows = ['<div class="rl head"><span>Reel</span><span class="n">Views</span>'
+        f'<span class="n">+{window}d</span><span class="n hide-sm">Engagement</span>'
+        '<span class="n hide-sm">Watch</span></div>']
+for i, r in order.head(60).iterrows():
+    trial = '<span class="trial">Trial</span>' if r["is_trial"] else ""
+    watch = f"{r['avg_watch_s']:.1f}s" if pd.notna(r["avg_watch_s"]) else ""
+    rows.append(f'<div class="rl"><span class="t">{html.escape(r["title"])}{trial}'
+                f'<small>{r["posted_at"]:%b %-d, %-I:%M %p}</small></span>'
+                f'<span class="n">{fmt_num(r["views"])}</span><span class="n">+{fmt_num(r["views_gained"])}</span>'
+                f'<span class="n hide-sm">{r["engagement_rate"]:.1%}</span><span class="n hide-sm">{watch}</span></div>')
+st.markdown('<div class="glass">' + "".join(rows) + "</div>", unsafe_allow_html=True)

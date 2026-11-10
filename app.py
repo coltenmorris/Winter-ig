@@ -10,5 +10,6 @@ chart_theme()
 nav = st.navigation([
     st.Page("media_kit.py", title="Media kit", default=True),
     st.Page("creator.py", title="Creator analytics"),
+    st.Page("calendar_page.py", title="Posting calendar", url_path="calendar"),
 ], position="hidden")
 nav.run()

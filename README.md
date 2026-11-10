@@ -6,6 +6,13 @@ Two pages in one app:
   average views, engagement rate, audience demographics, top reels and growth.
 - **Creator analytics** (add `/creator` to the link): private insights on when to post,
   which topics pull views, hook strength, early velocity and trial reels.
+- **Posting calendar** (add `/calendar` to the link): a heatmap of how often you post, with
+  views or engagement on each day. Tap a day to see its reels, then open any reel for its
+  first 24 hours, first week and to-date stats.
+
+If the daily sync fails with "Cannot parse access token", re-copy the token from the Meta
+dashboard's **Generate access tokens** section and paste only the token (it starts with `IG`)
+into the `IG_ACCESS_TOKEN` secret.
 
 A local dashboard that pulls your Instagram video stats (views, reach, likes, comments,
 shares, saves, watch time, skip rate) into a database every day and charts the trends.
