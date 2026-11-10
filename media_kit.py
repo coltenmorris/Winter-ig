@@ -88,7 +88,7 @@ def bars(df: pd.DataFrame, label_map=None, top=6, by_value=True) -> str:
         p, w = r["value"] / total, r["value"] / peak
         rows.append(f'<div class="row"><span class="lbl">{esc(str(lbl))}</span>'
                     f'<span class="track"><span class="fill" style="width:{w*100:.1f}%;display:block"></span></span>'
-                    f'<span class="pct">{p:.0%}</span></div>')
+                    f'<span class="pct">{"<1%" if p < .005 else f"{p:.0%}"}</span></div>')
     return '<div class="bars">' + "".join(rows) + "</div>"
 
 
@@ -119,7 +119,9 @@ if not demo.empty:
         if "country" in demo_totals:
             names = {"US": "United States", "CA": "Canada", "GB": "United Kingdom", "AU": "Australia",
                      "MX": "Mexico", "KE": "Kenya", "DE": "Germany", "FR": "France", "BR": "Brazil",
-                     "IN": "India", "JP": "Japan", "ES": "Spain", "IT": "Italy", "NZ": "New Zealand"}
+                     "IN": "India", "JP": "Japan", "ES": "Spain", "IT": "Italy", "NZ": "New Zealand",
+                     "NG": "Nigeria", "BE": "Belgium", "NL": "Netherlands", "IE": "Ireland", "PH": "Philippines",
+                     "ZA": "South Africa", "NO": "Norway", "SE": "Sweden", "TT": "Trinidad and Tobago", "JM": "Jamaica"}
             st.markdown("### Top countries")
             st.markdown('<div class="glass panel">' + bars(demo[demo["breakdown"] == "country"], names, top=5) + "</div>", unsafe_allow_html=True)
 
