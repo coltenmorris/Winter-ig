@@ -72,6 +72,7 @@ def build():
             "tags": sorted({w[1:].lower().strip(".,!?") for w in caption.split() if w.startswith("#") and len(w) > 1}),
             "posted": posted.strftime("%Y-%m-%dT%H:%M"), "date": posted.strftime("%Y-%m-%d"),
             "thumb": m["thumbnail_url"], "link": m["permalink"], "trial": bool(m["is_trial"]),
+            "kind": db.media_kind(m["media_type"], m["product_type"]), "media_type": m["media_type"],
             "h24": at(1, 1), "week": at(7, 2), "total": stats(snaps[-1]),
             "series": [[age, s["views"] if s["views"] is not None else s["likes"]] for age, s in aged],
         })
@@ -80,14 +81,18 @@ def build():
                  for r in conn.execute("SELECT captured_date, followers FROM account_snapshots ORDER BY captured_date")]
     daily = [{"date": r["captured_date"], "views": r["views"], "reach": r["reach"]}
              for r in conn.execute("SELECT * FROM account_daily ORDER BY captured_date")]
-    demo = {}
+    all_demo = {}
     for r in conn.execute("SELECT breakdown, label, value FROM demographics"):
-        demo.setdefault(r["breakdown"], {})[r["label"]] = r["value"]
+        all_demo.setdefault(r["breakdown"], {})[r["label"]] = r["value"]
+    # Viewer demographics (accounts reached this month) when available, otherwise followers.
+    viewers = {k.split(":", 1)[1]: v for k, v in all_demo.items() if k.startswith("viewers:")}
+    demo = viewers or {k: v for k, v in all_demo.items() if ":" not in k}
+    demo_source = "viewers" if viewers else "followers"
 
     data = {
         "profile": {"name": setting("profile_name"), "username": setting("profile_username"),
                     "bio": setting("profile_biography"), "pic": setting("profile_profile_picture_url")},
-        "followers": followers, "daily": daily, "demographics": demo, "reels": reels,
+        "followers": followers, "daily": daily, "demographics": demo, "demo_source": demo_source, "reels": reels,
         "contact": os.getenv("CONTACT_EMAIL") or None, "tagline": os.getenv("CREATOR_TAGLINE") or None,
         "updated": datetime.now(timezone.utc).astimezone(TZ).strftime("%B %-d, %Y"),
     }

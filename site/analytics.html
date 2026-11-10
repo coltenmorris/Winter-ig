@@ -24,16 +24,20 @@
   <div class="glass" id="ptable"></div>
 
   <h2>Posting calendar</h2>
-  <p class="lede">Each day shows how many videos you posted. Tap a day to list its videos, or pick a date range below.</p>
-  <div class="controls one"><label class="f">Month<select id="month"></select></label></div>
-  <div class="legend">Videos posted: <span><i style="background:rgba(36,48,42,.45)"></i>0</span><span><i style="background:#2E4030"></i>1</span><span><i style="background:var(--moss)"></i>2</span><span><i style="background:var(--fern)"></i>3+</span></div>
-  <div class="cal big glass"><div class="dows"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div><div class="grid" id="grid"></div></div>
+  <p class="lede">Each day shows how many times you posted. Tap a day to list what you posted, or pick a date range below.</p>
+  <div class="calbar">
+    <div class="seg" role="group" aria-label="Show" id="kindseg"><button aria-pressed="true" data-k="all">Total</button><button aria-pressed="false" data-k="reel">Reels</button><button aria-pressed="false" data-k="post">Posts</button></div>
+    <div class="seg" role="group" aria-label="View" id="spanseg"><button aria-pressed="true" data-s="3">3 months</button><button aria-pressed="false" data-s="1">1 month</button></div>
+    <label class="f mpick"><span id="mlabel">Ending month</span><select id="month"></select></label>
+  </div>
+  <div class="legend">Posted per day: <span><i style="background:rgba(36,48,42,.45)"></i>0</span><span><i style="background:#2E4030"></i>1</span><span><i style="background:var(--moss)"></i>2</span><span><i style="background:var(--fern)"></i>3+</span></div>
+  <div class="minis" id="minis"></div>
   <div class="summary" id="msum"></div>
 
-  <h2 id="rangeh">Videos in a range</h2>
+  <h2 id="rangeh">In a range</h2>
   <div class="controls range">
     <label class="f">Date range<select id="preset">
-      <option value="month">This month</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option>
+      <option value="shown">Shown months</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option>
       <option value="90">Last 90 days</option><option value="all">All time</option><option value="custom">Custom dates</option></select></label>
     <label class="f">Sort by<select id="sort"></select></label>
     <label class="f cd">From<input type="date" id="from"></label>
@@ -59,7 +63,7 @@
 <script src="common.js"></script>
 <script>
 mark("an");
-const R = D.reels, $ = id => document.getElementById(id);
+const ALL = D.reels, R = ALL.filter(r => r.kind !== "post"), $ = id => document.getElementById(id);
 $("updated").textContent = `Updated ${D.updated}. ${R.length} reels tracked.`;
 if (!HAS_VIEWS) $("warn").innerHTML = `<div class="glass warn">Instagram isn't returning views, reach or watch time yet, so likes are shown instead.
   This usually means the access token is missing the <b>instagram_manage_insights</b> permission. Generate a new token with it,
@@ -128,79 +132,93 @@ const ym = d => d.slice(0, 7);
 const pad2 = n => String(n).padStart(2, "0");
 const today = new Date(), todayKey = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
 const thisMonth = todayKey.slice(0, 7);
+const monthName = (m, o = { month: "long", year: "numeric" }) => new Date(m + "-15").toLocaleDateString("en-US", o);
+const shiftMonth = (m, n) => { let [y, mo] = m.split("-").map(Number); mo += n; while (mo < 1) { mo += 12; y--; } while (mo > 12) { mo -= 12; y++; } return `${y}-${pad2(mo)}`; };
 const allMonths = []; {
-  const first = R.length ? R[R.length - 1].date.slice(0, 7) : thisMonth;
-  let [y, m] = thisMonth.split("-").map(Number);
-  while (`${y}-${pad2(m)}` >= first) { allMonths.push(`${y}-${pad2(m)}`); m--; if (!m) { m = 12; y--; } }
+  const first = ALL.length ? ALL[ALL.length - 1].date.slice(0, 7) : thisMonth;
+  for (let m = thisMonth; m >= first; m = shiftMonth(m, -1)) allMonths.push(m);
 }
-const withPosts = new Set(R.map(r => ym(r.date)));
-$("month").innerHTML = allMonths.map(m => `<option value="${m}">${new Date(m + "-15").toLocaleDateString("en-US", { month: "long", year: "numeric" })}${withPosts.has(m) ? "" : " (no videos)"}</option>`).join("");
-$("month").value = allMonths.find(m => withPosts.has(m)) || thisMonth;
-let selected = null;
+let kind = "all", span = 3, selected = null;
+const items = () => kind === "all" ? ALL : ALL.filter(r => (r.kind || "reel") === kind);
+const NOUN = { all: "posts and reels", reel: "reels", post: "posts" };
+
+function fillMonths() {
+  const has = new Set(items().map(r => ym(r.date))), keep = $("month").value;
+  $("month").innerHTML = allMonths.map(m => `<option value="${m}">${monthName(m)}${has.has(m) ? "" : " (nothing posted)"}</option>`).join("");
+  $("month").value = keep && allMonths.includes(keep) ? keep : (span === 3 ? thisMonth : (allMonths.find(m => has.has(m)) || thisMonth));
+  $("mlabel").textContent = span === 3 ? "Ending month" : "Month";
+}
+const shownMonths = () => span === 3 ? [-2, -1, 0].map(n => shiftMonth($("month").value, n)) : [$("month").value];
 
 function renderCalendar() {
-  const [y, m] = $("month").value.split("-").map(Number);
-  const n = new Date(y, m, 0).getDate(), offset = (new Date(y, m - 1, 1).getDay() + 6) % 7, byDay = {};
-  R.forEach(r => (byDay[r.date] ||= []).push(r));
-  const cells = Array.from({ length: offset }, () => `<div class="day empty"></div>`);
-  for (let d = 1; d <= n; d++) {
-    const key = `${y}-${pad2(m)}-${pad2(d)}`, c = (byDay[key] || []).length;
-    cells.push(`<button class="day l${Math.min(c, 3)}${key > todayKey ? " future" : ""}" data-day="${key}" aria-pressed="${key === selected}"
-      aria-label="${key}, ${c} videos"><span class="d">${d}</span><span class="v">${c || ""}</span></button>`);
-  }
-  $("grid").innerHTML = cells.join("");
-  const ml = R.filter(r => ym(r.date) === $("month").value);
-  $("msum").innerHTML = `<span><b>${ml.length}</b>videos this month</span><span><b>${new Set(ml.map(r => r.date)).size}</b>days posted</span>`;
+  const byDay = {}; items().forEach(r => byDay[r.date] = (byDay[r.date] || 0) + 1);
+  const dows = ["M", "T", "W", "T", "F", "S", "S"].map(d => `<div>${d}</div>`).join("");
+  $("minis").innerHTML = shownMonths().map(mk => {
+    const [y, m] = mk.split("-").map(Number), n = new Date(y, m, 0).getDate(), offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+    let cells = Array.from({ length: offset }, () => `<span class="mday empty"></span>`);
+    for (let d = 1; d <= n; d++) {
+      const key = `${mk}-${pad2(d)}`, c = byDay[key] || 0;
+      cells.push(`<button class="mday l${Math.min(c, 3)}${key > todayKey ? " future" : ""}" data-day="${key}" aria-pressed="${key === selected}"
+        aria-label="${key}, ${c} posted" title="${d}: ${c} posted">${c || ""}</button>`);
+    }
+    return `<div class="mini glass"><div class="mt">${monthName(mk)}</div><div class="mg dows">${dows}</div><div class="mg">${cells.join("")}</div></div>`;
+  }).join("");
+  $("minis").classList.toggle("single", span === 1);
+  const ms = new Set(shownMonths()), list = items().filter(r => ms.has(ym(r.date)));
+  $("msum").innerHTML = `<span><b>${list.length}</b>${NOUN[kind]} in view</span><span><b>${new Set(list.map(r => r.date)).size}</b>days posted</span>`;
 }
 
 // ---------- range + sort ----------
 const SORTS = [["new", "Newest first"], ["old", "Oldest first"]]
   .concat(HAS_VIEWS ? [["views", "Most views"], ["eng", "Highest engagement"]] : [], [["likes", "Most likes"], ["comments", "Most comments"]]);
 $("sort").innerHTML = SORTS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
-const minDate = R.length ? R[R.length - 1].date : todayKey;
+const minDate = ALL.length ? ALL[ALL.length - 1].date : todayKey;
 $("from").min = $("to").min = minDate; $("from").max = $("to").max = todayKey;
 $("from").value = minDate; $("to").value = todayKey;
 const addDays = (key, n) => { const d = new Date(key + "T12:00"); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
 const nice = k => fmtDate(k + "T12:00", { month: "short", day: "numeric", year: "numeric" });
+const what = r => r.kind === "post" ? (r.media_type === "CAROUSEL_ALBUM" ? "Carousel" : "Post") : "Reel";
 
 function renderRange() {
   const p = $("preset").value;
   document.querySelectorAll(".cd").forEach(el => el.style.display = p === "custom" ? "" : "none");
   let from, to, label;
-  if (p === "month") { const [y, m] = $("month").value.split("-").map(Number); from = `${y}-${pad2(m)}-01`; to = `${y}-${pad2(m)}-${pad2(new Date(y, m, 0).getDate())}`;
-    label = new Date(from + "T12:00").toLocaleDateString("en-US", { month: "long", year: "numeric" }); }
+  if (p === "shown") { const sm = shownMonths(); const [y, m] = sm[sm.length - 1].split("-").map(Number);
+    from = sm[0] + "-01"; to = `${sm[sm.length - 1]}-${pad2(new Date(y, m, 0).getDate())}`;
+    label = sm.length > 1 ? `${monthName(sm[0], { month: "short" })} to ${monthName(sm[sm.length - 1], { month: "short", year: "numeric" })}` : monthName(sm[0]); }
   else if (p === "all") { from = minDate; to = todayKey; label = "all time"; }
   else if (p === "custom") { from = $("from").value || minDate; to = $("to").value || todayKey; if (from > to) [from, to] = [to, from];
     label = from === to ? nice(from) : `${nice(from)} to ${nice(to)}`; }
   else { from = addDays(todayKey, 1 - Number(p)); to = todayKey; label = `last ${p} days`; }
-  const s = $("sort").value, get = {
-    new: r => -dt(r.posted), old: r => +dt(r.posted), views: r => -(r.total.views ?? -1), eng: r => -(r.total.engagement ?? -1),
-    likes: r => -(r.total.likes ?? -1), comments: r => -(r.total.comments ?? -1) }[s];
-  const list = R.filter(r => r.date >= from && r.date <= to).sort((a, b) => get(a) - get(b));
+  const get = { new: r => -dt(r.posted), old: r => +dt(r.posted), views: r => -(r.total.views ?? -1), eng: r => -(r.total.engagement ?? -1),
+    likes: r => -(r.total.likes ?? -1), comments: r => -(r.total.comments ?? -1) }[$("sort").value];
+  const list = items().filter(r => r.date >= from && r.date <= to).sort((a, b) => get(a) - get(b));
   const tot = list.map(r => val(r)).filter(v => v != null).reduce((x, y) => x + y, 0);
-  $("rsum").innerHTML = `<span><b>${list.length}</b>videos, ${esc(label)}</span><span><b>${fmt(tot)}</b>${MAIN_LABEL}</span>
-    <span><b>${list.length ? fmt(tot / list.length) : 0}</b>${MAIN_LABEL} per video</span>`;
+  $("rangeh").textContent = { all: "Posts and reels", reel: "Reels", post: "Posts" }[kind] + " in a range";
+  $("rsum").innerHTML = `<span><b>${list.length}</b>${NOUN[kind]}, ${esc(label)}</span><span><b>${fmt(tot)}</b>${MAIN_LABEL}</span>
+    <span><b>${list.length ? fmt(tot / list.length) : 0}</b>${MAIN_LABEL} each on average</span>`;
   $("rlist").innerHTML = list.length ? list.map(r => `
     <button class="daycard" onclick="openReel('${r.id}')">${thumb(r)}<div>
-      <div class="when">${fmtDate(r.posted, { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at ${fmtTime(r.posted)}${r.trial ? ", trial reel" : ""}</div>
+      <div class="when">${what(r)}, ${fmtDate(r.posted, { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at ${fmtTime(r.posted)}${r.trial ? ", trial reel" : ""}</div>
       <div class="cap">${esc(r.caption || "No caption")}</div>
       <div class="st"><b>${fmt(val(r))}</b> ${MAIN_LABEL}${r.total.engagement != null ? ` &nbsp; <b>${pct(r.total.engagement)}</b> engagement` : ` &nbsp; <b>${fmt(r.total.comments)}</b> comments`}</div>
-      <div class="go">View analytics</div></div></button>`).join("") : `<p class="lede">No videos posted in this range.</p>`;
+      <div class="go">View analytics</div></div></button>`).join("") : `<p class="lede">No ${NOUN[kind]} in this range.</p>`;
 }
 
-$("grid").addEventListener("click", e => {
-  const b = e.target.closest(".day[data-day]"); if (!b) return;
-  selected = b.dataset.day;
-  $("preset").value = "custom"; $("from").value = $("to").value = selected;
-  renderCalendar(); renderRange();
+const rerender = () => { renderCalendar(); renderRange(); };
+$("minis").addEventListener("click", e => {
+  const b = e.target.closest(".mday[data-day]"); if (!b) return;
+  selected = b.dataset.day; $("preset").value = "custom"; $("from").value = $("to").value = selected; rerender();
   $("rangeh").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 });
-$("month").addEventListener("change", () => { renderCalendar(); if ($("preset").value === "month") renderRange(); });
-["preset", "sort", "from", "to"].forEach(id => $(id).addEventListener("change", () => {
-  if (id === "preset" && $("preset").value !== "custom") selected = null;
-  renderCalendar(); renderRange();
-}));
-renderCalendar(); renderRange();
+$("kindseg").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (!b) return;
+  kind = b.dataset.k; $("kindseg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); fillMonths(); rerender(); });
+$("spanseg").addEventListener("click", e => { const b = e.target.closest("button[data-s]"); if (!b) return;
+  span = Number(b.dataset.s); $("spanseg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  $("month").value = ""; fillMonths(); rerender(); });
+$("month").addEventListener("change", rerender);
+["preset", "sort", "from", "to"].forEach(id => $(id).addEventListener("change", () => { if (id === "preset" && $("preset").value !== "custom") selected = null; rerender(); }));
+fillMonths(); rerender();
 
 // ---------- when to post ----------
 const settled = R.filter(r => (Date.now() - dt(r.posted)) / 864e5 >= 3 && val(r) != null);

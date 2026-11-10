@@ -33,7 +33,7 @@ REELS_ONLY_METRICS = [
 
 MEDIA_FIELDS = [
     "id", "caption", "media_type", "media_product_type", "timestamp",
-    "permalink", "thumbnail_url", "like_count", "comments_count",
+    "permalink", "thumbnail_url", "media_url", "like_count", "comments_count",
 ]
 
 
@@ -155,13 +155,14 @@ class InstagramClient:
                 pass
         return out
 
-    def demographics(self) -> dict:
-        """Follower breakdowns by age, gender, country, city. Needs 100+ followers."""
+    def demographics(self, metric: str = "follower_demographics") -> dict:
+        """Audience breakdowns by age, gender, country, city. Needs 100+ followers.
+        metric: follower_demographics, reached_audience_demographics (viewers) or engaged_audience_demographics."""
         out = {}
         for b in ["age", "gender", "country", "city"]:
             try:
                 resp = self._get(f"{self.uid}/insights", {
-                    "metric": "follower_demographics", "period": "lifetime",
+                    "metric": metric, "period": "lifetime",
                     "metric_type": "total_value", "timeframe": "this_month", "breakdown": b})
                 rows = resp["data"][0]["total_value"]["breakdowns"][0]["results"]
                 out[b] = {r["dimension_values"][0]: r["value"] for r in rows}
@@ -179,7 +180,9 @@ class InstagramClient:
         except InstagramError as e:
             # Some fields are only available on certain login types; retry without them.
             if "media_product_type" in str(e) or "nonexisting field" in str(e).lower():
-                fields.remove("media_product_type")
+                for f in ("media_product_type", "media_url"):
+                    if f in fields:
+                        fields.remove(f)
                 page = self._get(f"{self.uid}/media", {"fields": ",".join(fields), "limit": 50})
             else:
                 raise

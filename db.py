@@ -64,7 +64,8 @@ def upsert_media(conn, m: dict):
              product_type=excluded.product_type, permalink=excluded.permalink,
              thumbnail_url=excluded.thumbnail_url""",
         (m["id"], m.get("caption"), m.get("media_type"), m.get("media_product_type"),
-         m.get("timestamp"), m.get("permalink"), m.get("thumbnail_url")),
+         m.get("timestamp"), m.get("permalink"),
+         m.get("thumbnail_url") or (m.get("media_url") if m.get("media_type") != "VIDEO" else None)),
     )
 
 
@@ -116,3 +117,8 @@ def save_profile(conn, me: dict):
     for k in ("username", "name", "biography", "profile_picture_url"):
         if me.get(k):
             set_setting(conn, f"profile_{k}", me[k])
+
+
+def media_kind(media_type, product_type) -> str:
+    """'reel' for reels and videos, 'post' for photos and carousels."""
+    return "reel" if product_type == "REELS" or media_type == "VIDEO" else "post"

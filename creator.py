@@ -29,6 +29,7 @@ with st.sidebar:
 
 media, snaps, acct, daily, demo, profile = load()
 t = video_table(media, snaps, window)
+t = t[t["kind"] == "reel"] if not t.empty else t  # analytics are reels only; the calendar covers posts too
 st.header("Creator analytics")
 if t.empty:
     st.info("No data yet. Run the sync first.")

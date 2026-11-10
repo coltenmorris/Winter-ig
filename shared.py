@@ -93,6 +93,7 @@ def video_table(media: pd.DataFrame, snaps: pd.DataFrame, window_days: int = 7) 
     t["title"] = (t["caption"].fillna("Untitled").str.split("\n").str[0]
                   .str.replace(r"#\w+", "", regex=True).str.strip().str.slice(0, 48))
     t["title"] = t["title"].where(t["title"] != "", "Untitled")
+    t["kind"] = [db.media_kind(a, b) for a, b in zip(t["media_type"], t["product_type"])]
     t["hashtags"] = t["caption"].fillna("").str.findall(r"#(\w+)").apply(lambda x: [h.lower() for h in x])
     t["age_days"] = (pd.Timestamp.now() - t["posted_at"]).dt.days
     return t

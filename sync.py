@@ -80,7 +80,7 @@ def maybe_refresh(conn, client: InstagramClient, log=print):
         log(f"Token refresh skipped: {e}")
 
 
-def run_sync(log=print, include_photos: bool = False) -> int:
+def run_sync(log=print, include_photos: bool = True) -> int:
     conn = db.connect()
     client = InstagramClient(get_token(conn))
     today = date.today().isoformat()
@@ -91,15 +91,20 @@ def run_sync(log=print, include_photos: bool = False) -> int:
     yesterday = (date.today() - timedelta(days=1)).isoformat()
     db.upsert_account_daily(conn, yesterday, client.account_daily())
     db.replace_demographics(conn, today, client.demographics())
+    # Viewers (accounts reached) and engaged accounts, this month, stored as "viewers:age" etc.
+    for prefix, metric in (("viewers", "reached_audience_demographics"), ("engaged", "engaged_audience_demographics")):
+        db.replace_demographics(conn, today, {f"{prefix}:{k}": v for k, v in client.demographics(metric).items()})
     log(f"Connected as @{me.get('username')} ({me.get('followers_count')} followers) via {me.get('api')}")
 
     media = client.list_media()
     videos = [m for m in media if include_photos or m.get("media_type") == "VIDEO"]
-    log(f"Found {len(media)} posts, {len(videos)} videos. Pulling insights...")
+    n_reels = sum(1 for m in media if db.media_kind(m.get("media_type"), m.get("media_product_type")) == "reel")
+    log(f"Found {n_reels} reels and {len(media) - n_reels} photo/carousel posts. Pulling insights...")
 
     for i, m in enumerate(videos, 1):
         db.upsert_media(conn, m)
-        is_reel = m.get("media_product_type", "REELS") == "REELS"
+        is_reel = db.media_kind(m.get("media_type"), m.get("media_product_type")) == "reel" \
+            and m.get("media_product_type", "REELS") == "REELS"
         ins = client.media_insights(m["id"], is_reel)
         # Fallback to the basic counts if insights were empty (e.g. very new post).
         ins.setdefault("likes", m.get("like_count"))
@@ -187,13 +192,13 @@ def seed_demo(days: int = 75, n_videos: int = 28):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--demo", action="store_true", help="fill the database with fake data")
-    p.add_argument("--include-photos", action="store_true", help="also track photo posts")
+    p.add_argument("--videos-only", action="store_true", help="skip photo and carousel posts")
     a = p.parse_args()
     if a.demo:
         seed_demo()
     else:
         try:
-            run_sync(include_photos=a.include_photos)
+            run_sync(include_photos=not a.videos_only)
         except InstagramError as e:
             msg = f"Instagram error: {e}"
             if "token" in str(e).lower() or "oauth" in str(e).lower():

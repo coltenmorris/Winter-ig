@@ -10,6 +10,7 @@ from shared import LANE, MOSS, SAGE, NAVY, SAND, SPLIT, RULE, cfg, fmt_num, load
 
 media, snaps, acct, daily, demo, profile = load()
 t = video_table(media, snaps, window_days=30)
+t = t[t["kind"] == "reel"] if not t.empty else t  # media kit stats are reels only
 
 if t.empty or acct.empty:
     st.header("Media kit")
@@ -92,10 +93,19 @@ def bars(df: pd.DataFrame, label_map=None, top=6, by_value=True) -> str:
     return '<div class="bars">' + "".join(rows) + "</div>"
 
 
+# Prefer viewer demographics (accounts that saw your content this month); fall back to followers.
+if not demo.empty:
+    viewers = demo[demo["breakdown"].str.startswith("viewers:")]
+    if not viewers.empty:
+        demo = viewers.assign(breakdown=viewers["breakdown"].str.split(":").str[1])
+        demo_lede = "Accounts that viewed your posts and reels this month, as reported by Instagram."
+    else:
+        demo = demo[~demo["breakdown"].str.contains(":")]
+        demo_lede = "Follower breakdown reported by Instagram."
 if not demo.empty:
     demo_totals = demo.groupby("breakdown")["value"].sum()
     st.markdown("## Who's watching")
-    st.markdown('<p class="lede">Follower breakdown reported by Instagram.</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="lede">{demo_lede}</p>', unsafe_allow_html=True)
     c1, c2 = st.columns(2, gap="large")
     with c1:
         if "age" in demo_totals:
