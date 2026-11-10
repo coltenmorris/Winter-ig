@@ -162,7 +162,7 @@ class InstagramClient:
                 pass
         return out
 
-    def demographics(self, metric: str = "follower_demographics") -> dict:
+    def demographics(self, metric: str = "follower_demographics", timeframe: str = "this_month") -> dict:
         """Audience breakdowns by age, gender, country, city. Needs 100+ followers.
         metric: follower_demographics, reached_audience_demographics (viewers) or engaged_audience_demographics."""
         out = {}
@@ -170,7 +170,7 @@ class InstagramClient:
             try:
                 resp = self._get(f"{self.uid}/insights", {
                     "metric": metric, "period": "lifetime",
-                    "metric_type": "total_value", "timeframe": "this_month", "breakdown": b})
+                    "metric_type": "total_value", "timeframe": timeframe, "breakdown": b})
                 rows = resp["data"][0]["total_value"]["breakdowns"][0]["results"]
                 out[b] = {r["dimension_values"][0]: r["value"] for r in rows}
             except (InstagramError, KeyError, IndexError):

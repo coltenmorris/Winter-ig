@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS demographics (
     breakdown TEXT, label TEXT, value INTEGER, captured_date TEXT,
     PRIMARY KEY (breakdown, label)
 );
+CREATE TABLE IF NOT EXISTS demographics_monthly (
+    month TEXT, audience TEXT, breakdown TEXT, label TEXT, value INTEGER,
+    PRIMARY KEY (month, audience, breakdown, label)
+);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 """
 
@@ -122,3 +126,14 @@ def save_profile(conn, me: dict):
 def media_kind(media_type, product_type) -> str:
     """'reel' for reels and videos, 'post' for photos and carousels."""
     return "reel" if product_type == "REELS" or media_type == "VIDEO" else "post"
+
+
+def save_monthly_demographics(conn, month: str, audience: str, demo: dict):
+    """Keep one audience breakdown per calendar month (the latest sync in that month wins)."""
+    for breakdown, rows in demo.items():
+        if not rows:
+            continue
+        conn.execute("DELETE FROM demographics_monthly WHERE month=? AND audience=? AND breakdown=?",
+                     (month, audience, breakdown))
+        conn.executemany("INSERT INTO demographics_monthly VALUES (?,?,?,?,?)",
+                         [(month, audience, breakdown, k, int(v)) for k, v in rows.items()])

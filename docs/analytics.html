@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Creator Analytics</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="style.css?v=202611101959">
+<link rel="stylesheet" href="style.css?v=202611102040">
 </head>
 <body>
 <div class="wrap">
@@ -59,8 +59,8 @@
   <div class="glass" id="list"></div>
   <div class="foot">Data from the Instagram API, refreshed by the daily sync.</div>
 </div>
-<script src="data.js?v=202611101959"></script>
-<script src="common.js?v=202611101959"></script>
+<script src="data.js?v=202611102040"></script>
+<script src="common.js?v=202611102040"></script>
 <script>
 mark("an");
 const ALL = D.reels, R = ALL.filter(r => r.kind !== "post"), $ = id => document.getElementById(id);
@@ -111,13 +111,17 @@ function renderSummary(g) {
   $("ptable").innerHTML = `<div class="ps head"><span>Period</span><span class="n hide-sm">Videos</span><span class="n">Views</span><span class="n hide-sm">Likes</span><span class="n">Engagement</span><span class="n">Followers</span></div>` + rows.join("");
   // Bar chart of views (or likes) per period, oldest to newest
   const pts = keys.filter(k => P[k].videos).reverse(), vals = pts.map(k => HAS_VIEWS ? P[k].views : P[k].likes);
-  const w = Math.max(340, Math.min(900, $("pchart").clientWidth - 40)), h = w < 500 ? 200 : 230, pad = { l: 44, r: 8, t: 10, b: 34 }, max = Math.max(...vals, 1), bw = (w - pad.l - pad.r) / Math.max(pts.length, 1);
-  const Y = v => h - pad.b - v / max * (h - pad.t - pad.b);
-  const every = Math.ceil(pts.length / (w < 500 ? 4 : 8));
+  const w = Math.max(340, Math.min(900, $("pchart").clientWidth - 40)), bw = (w - 52) / Math.max(pts.length, 1);
+  // Label every bar; tilt the labels when bars are too narrow for flat text.
+  const short = k => g === "month" ? new Date(k + "-15").toLocaleDateString("en-US", { month: "short", year: "2-digit" })
+    : new Date(k + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const tilt = bw < 46, pad = { l: 44, r: 8, t: 10, b: tilt ? 52 : 30 }, h = (w < 500 ? 190 : 220) + pad.b - 30;
+  const max = Math.max(...vals, 1), Y = v => h - pad.b - v / max * (h - pad.t - pad.b);
   $("pchart").innerHTML = pts.length ? `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="${MAIN_LABEL} per period">
     ${[0, .5, 1].map(f => `<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(max * f)}" y2="${Y(max * f)}" stroke="rgba(211,219,207,.12)"/><text x="${pad.l - 6}" y="${Y(max * f) + 4}" text-anchor="end">${fmt(max * f)}</text>`).join("")}
-    ${pts.map((k, i) => `<rect x="${pad.l + i * bw + bw * .15}" y="${Y(vals[i])}" width="${bw * .7}" height="${h - pad.b - Y(vals[i])}" fill="${vals[i] === max ? "#E6D49C" : "#4E6A47"}"><title>${periodLabel(k, g)}: ${vals[i].toLocaleString()} ${MAIN_LABEL}</title></rect>
-      ${i % every === 0 ? `<text x="${pad.l + i * bw + bw / 2}" y="${h - 12}" text-anchor="middle">${g === "month" ? periodLabel(k, g) : new Date(k + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</text>` : ""}`).join("")}
+    ${pts.map((k, i) => { const cx = pad.l + i * bw + bw / 2, ly = h - pad.b + 14;
+      return `<rect x="${pad.l + i * bw + bw * .15}" y="${Y(vals[i])}" width="${bw * .7}" height="${h - pad.b - Y(vals[i])}" fill="${vals[i] === max ? "#E6D49C" : "#4E6A47"}"><title>${periodLabel(k, g)}: ${vals[i].toLocaleString()} ${MAIN_LABEL}</title></rect>
+      <text x="${cx}" y="${ly}" text-anchor="${tilt ? "end" : "middle"}"${tilt ? ` transform="rotate(-45 ${cx} ${ly})"` : ""}>${short(k)}</text>`; }).join("")}
   </svg>` : `<p class="lede">No videos yet.</p>`;
 }
 $("gran").addEventListener("click", e => {

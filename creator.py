@@ -80,9 +80,11 @@ def plabel(p):
 
 
 main_col = "views" if has_views_p else "likes"
-chart_df = summ.reset_index().assign(label=lambda d: d["period"].map(plabel)).iloc[::-1]
+short_lbl = (lambda p: p.strftime("%b %y")) if gran == "Monthly" else (lambda p: p.start_time.strftime("%b %-d '%y"))
+chart_df = summ.reset_index().assign(label=lambda d: d["period"].map(short_lbl)).iloc[::-1]
 bars = alt.Chart(chart_df.dropna(subset=["videos"])).mark_bar(color=SAGE).encode(
-    x=alt.X("label:N", sort=None, title=None, axis=alt.Axis(labelAngle=0 if gran == "Monthly" else -40, labelLimit=90)),
+    x=alt.X("label:N", sort=None, title=None,
+            axis=alt.Axis(labelAngle=0 if len(chart_df) <= 6 else -45, labelLimit=110, labelOverlap=False, labelFontSize=11)),
     y=alt.Y(f"{main_col}:Q", title=main_col.capitalize(), axis=alt.Axis(format="~s")),
     tooltip=[alt.Tooltip("label:N", title="Period"), alt.Tooltip(f"{main_col}:Q", format=","),
              alt.Tooltip("videos:Q", title="Videos")],

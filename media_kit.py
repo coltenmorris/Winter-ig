@@ -6,6 +6,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+import db
 import flags as flags_mod
 
 from shared import LANE, MOSS, SAGE, NAVY, SAND, SPLIT, RULE, cfg, fmt_num, load, video_table
@@ -43,6 +44,22 @@ MAIN, MAIN_L = ("views", "views") if HAS_VIEWS else ("likes", "likes")
 avg_views = recent[MAIN].mean()
 eng = recent["engagement_rate"].mean() if HAS_VIEWS else None
 
+# The same figures as they stood a month ago: reels posted up to 30 days ago, same window rules.
+then = t[t["age_days"] >= 30].assign(age_days=lambda d: d["age_days"] - 30)
+prev_recent = then[(then["age_days"] <= 90) & (then["age_days"] >= 3)]
+if len(prev_recent) < 3:
+    prev_recent = then
+prev_avg = prev_recent[MAIN].mean() if len(prev_recent) else None
+prev_eng = prev_recent["engagement_rate"].mean() if HAS_VIEWS and len(prev_recent) else None
+
+
+def last_month(cur, prev, show):
+    """'Last month X' line, with a green arrow only when the figure went up."""
+    if prev is None or prev != prev or cur is None or cur != cur:
+        return ""
+    arrow = '<span class="up" aria-label="up from last month">&#9650;</span>' if cur > prev else ""
+    return f'<div class="lm">{arrow}Last month {show(prev)}</div>'
+
 d30 = daily[daily["captured_date"] > now - pd.Timedelta(days=30)]
 views_30 = d30["views"].sum() if d30["views"].notna().any() else t[MAIN].sum()
 v30_label = "Views in the last 30 days" if d30["views"].notna().any() else f"Total {MAIN_L} across reels"
@@ -70,8 +87,8 @@ st.markdown(f"""
   </div>
 </div>
 <div class="board glass">
-  <div><div class="v">{fmt_num(avg_views)}</div><div class="k">Average {MAIN_L} per reel</div></div>
-  {f'<div><div class="v">{eng:.1%}</div><div class="k">Engagement rate</div></div>' if eng is not None and eng == eng
+  <div><div class="v">{fmt_num(avg_views)}</div><div class="k">Average {MAIN_L} per reel</div>{last_month(avg_views, prev_avg, fmt_num)}</div>
+  {f'<div><div class="v">{eng:.1%}</div><div class="k">Engagement rate</div>{last_month(eng, prev_eng, lambda x: f"{x:.1%}")}</div>' if eng is not None and eng == eng
      else f'<div><div class="v">{len(t)}</div><div class="k">Reels published</div></div>'}
   <div><div class="v">{fmt_num(views_30)}</div><div class="k">{v30_label}</div></div>
   {f'<div><div class="v">+{fmt_num(gained)}</div><div class="k">New followers in 30 days</div><div class="d">{growth_pct:+.1%} growth</div></div>'
@@ -80,10 +97,22 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ---------------- audience ----------------
+def change(p, prev_share):
+    """Month-over-month change in percentage points; green arrow only when it went up."""
+    if prev_share is None:
+        return ""
+    d = round((p - prev_share) * 100)
+    if d > 0:
+        return f'<span class="chg"><span class="up">&#9650;</span> +{d} pts</span>'
+    return f'<span class="chg">{"no change" if d == 0 else f"{d} pts"}</span>'
+
+
 def bars(df: pd.DataFrame, label_map=None, top=6, by_value=True) -> str:
     if by_value:
         df = df.sort_values("value", ascending=False).head(top)
-    total = demo_totals[df["breakdown"].iloc[0]]
+    b = df["breakdown"].iloc[0]
+    total = demo_totals[b]
+    pshare = prev_share.get(b)
     peak = df["value"].max()
     rows = []
     for _, r in df.iterrows():
@@ -92,19 +121,33 @@ def bars(df: pd.DataFrame, label_map=None, top=6, by_value=True) -> str:
         p, w = r["value"] / total, r["value"] / peak
         rows.append(f'<div class="row"><span class="lbl">{esc(str(lbl))}</span>'
                     f'<span class="track"><span class="fill" style="width:{w*100:.1f}%;display:block"></span></span>'
-                    f'<span class="pct">{"<1%" if p < .005 else f"{p:.0%}"}</span></div>')
-    return '<div class="bars">' + "".join(rows) + "</div>"
+                    f'<span class="pct">{"<1%" if p < .005 else f"{p:.0%}"}</span>'
+                    + (change(p, pshare.get(r["label"], 0.0)) if pshare is not None else "") + "</div>")
+    return f'<div class="bars{" mom" if pshare is not None else ""}">' + "".join(rows) + "</div>"
 
 
 # Prefer viewer demographics (accounts that saw your content this month); fall back to followers.
+audience = "followers"
 if not demo.empty:
     viewers = demo[demo["breakdown"].str.startswith("viewers:")]
     if not viewers.empty:
         demo = viewers.assign(breakdown=viewers["breakdown"].str.split(":").str[1])
+        audience = "viewers"
         demo_lede = "Accounts that viewed your posts and reels this month, as reported by Instagram."
     else:
         demo = demo[~demo["breakdown"].str.contains(":")]
         demo_lede = "Follower breakdown reported by Instagram."
+
+# Last month's breakdown (saved by the daily sync) for month-over-month change, as shares of each total.
+prev_month = (pd.Timestamp.today().to_period("M") - 1).strftime("%Y-%m")
+_conn = db.connect()
+_prev = pd.read_sql("SELECT breakdown, label, value FROM demographics_monthly WHERE month=? AND audience=?",
+                    _conn, params=(prev_month, audience))
+_conn.close()
+prev_share = {b: (g.set_index("label")["value"] / g["value"].sum()).to_dict() for b, g in _prev.groupby("breakdown")}
+if not demo.empty:
+    demo_lede += (f" Changes compare with {pd.Period(prev_month).strftime('%B')}." if prev_share else
+                  " Month-over-month changes appear once last month's numbers are saved.")
 if not demo.empty:
     demo_totals = demo.groupby("breakdown")["value"].sum()
     st.markdown("## Who's watching")
@@ -123,8 +166,8 @@ if not demo.empty:
             st.markdown("### Gender")
             st.markdown(f"""<div class="glass panel"><div class="split"><span style="width:{m*100:.1f}%;background:{MOSS}"></span>
               <span style="width:{f*100:.1f}%;background:{LANE}"></span><span style="flex:1;background:{RULE}"></span></div>
-              <div class="legend"><i style="background:{MOSS}"></i>Men {m:.0%} &nbsp;&nbsp;
-              <i style="background:{LANE}"></i>Women {f:.0%}</div></div>""", unsafe_allow_html=True)
+              <div class="legend"><i style="background:{MOSS}"></i>Men {m:.0%}{change(m, prev_share["gender"].get("M", 0.0)) if "gender" in prev_share else ""} &nbsp;&nbsp;
+              <i style="background:{LANE}"></i>Women {f:.0%}{change(f, prev_share["gender"].get("F", 0.0)) if "gender" in prev_share else ""}</div></div>""", unsafe_allow_html=True)
     with c2:
         if "city" in demo_totals:
             st.markdown("### Top cities")

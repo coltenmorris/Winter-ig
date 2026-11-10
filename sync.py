@@ -90,10 +90,20 @@ def run_sync(log=print, include_photos: bool = True) -> int:
     db.save_profile(conn, me)
     yesterday = (date.today() - timedelta(days=1)).isoformat()
     db.upsert_account_daily(conn, yesterday, client.account_daily())
-    db.replace_demographics(conn, today, client.demographics())
+    this_month = date.today().strftime("%Y-%m")
+    last_month = (date.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+    followers_demo = client.demographics()
+    db.replace_demographics(conn, today, followers_demo)
+    db.save_monthly_demographics(conn, this_month, "followers", followers_demo)
     # Viewers (accounts reached) and engaged accounts, this month, stored as "viewers:age" etc.
     for prefix, metric in (("viewers", "reached_audience_demographics"), ("engaged", "engaged_audience_demographics")):
-        db.replace_demographics(conn, today, {f"{prefix}:{k}": v for k, v in client.demographics(metric).items()})
+        cur = client.demographics(metric)
+        db.replace_demographics(conn, today, {f"{prefix}:{k}": v for k, v in cur.items()})
+        db.save_monthly_demographics(conn, this_month, prefix, cur)
+        # Last month's final numbers, if Instagram still offers that timeframe
+        prev = client.demographics(metric, "prev_month")
+        if prev:
+            db.save_monthly_demographics(conn, last_month, prefix, prev)
     log(f"Connected as @{me.get('username')} ({me.get('followers_count')} followers) via {me.get('api')}")
 
     media = client.list_media()

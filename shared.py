@@ -194,6 +194,10 @@ a {{ color: {FERNB}; }}
 .bars .track {{ height: 4px; background: {IVY}; }}
 .bars .fill {{ height:100%; background: {FERNB}; }}
 .bars .pct {{ text-align:right; color:{STONE}; font-size:.92rem; }}
+.bars.mom .row {{ grid-template-columns: 9rem 1fr 3.2rem 5.2rem; }}
+.chg {{ color:{STONE}; font-size:.82rem; text-align:right; white-space:nowrap; margin-left: 6px; }}
+.up {{ color: #7CC47F; margin-right: 4px; }}
+.lm {{ color:{STONE}; font-size:.85rem; margin-top: 6px; }}
 .split {{ display:flex; height: 6px; margin: 10px 0 10px; }}
 .legend {{ color:{STONE}; font-size:.9rem; }}
 .legend i {{ display:inline-block; width:10px; height:10px; margin-right:6px; }}
@@ -262,6 +266,7 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
   .board > div:nth-child(n+3) {{ border-top: 1px solid {RULE_C}; }}
   .reels {{ grid-template-columns: repeat(2, minmax(0,1fr)); gap: 22px 12px; }}
   .bars .row {{ grid-template-columns: 7rem 1fr 2.8rem; }}
+  .bars.mom .row {{ grid-template-columns: 6rem 1fr 2.6rem 4.6rem; }}
   .rl {{ grid-template-columns: 1fr 4.4rem 4.4rem; }}
   .ps {{ grid-template-columns: minmax(0,1.5fr) repeat(3, minmax(0,1fr)); padding: 10px 12px; font-size: .88rem; }}
   .ps .hide-sm {{ display:none; }}

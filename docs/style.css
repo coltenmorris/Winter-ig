@@ -85,6 +85,10 @@ h3 { font-size: 1.05rem; letter-spacing: -.01em; margin: 0 0 12px; font-weight: 
 .bars .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bars .track { height: 4px; background: var(--ivy); }
 .bars .fill { height: 100%; background: var(--fern); }
+.bars.mom .row { grid-template-columns: 9rem 1fr 3.4rem 5.4rem; }
+.chg { color: var(--stone); font-size: .82rem; text-align: right; white-space: nowrap; margin-left: 6px; }
+.up { color: #7CC47F; margin-right: 4px; }
+.lm { color: var(--stone); font-size: .85rem; margin-top: 6px; }
 .bars .pct { text-align: right; color: var(--stone); font-size: .92rem; }
 svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
 svg.chart text { font-family: var(--sans); font-size: 11px; fill: var(--stone); }
@@ -222,6 +226,7 @@ table.ms td { font-size: 1.15rem; font-weight: 700; letter-spacing: -.03em; }
   .cal.big .day .v { font-size: 1.5rem; }
   .cal.big .day .d { font-size: .7rem; }
   .bars .row { grid-template-columns: 7rem 1fr 2.8rem; }
+  .bars.mom .row { grid-template-columns: 5.6rem 1fr 2.6rem 4.6rem; }
   .cal { padding: 8px; } .cal .dows, .cal .grid { gap: 3px; }
   .cal .dows div { padding-left: 2px; font-size: .72rem; }
   .day { padding: 4px; } .day .v { font-size: .9rem; } .day .d { font-size: .66rem; }

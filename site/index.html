@@ -24,6 +24,15 @@ const pool = recent.length >= 3 ? recent : R;
 const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
 const mains = pool.map(r => val(r)).filter(v => v != null);
 const engs = pool.map(r => r.total && r.total.engagement).filter(v => v != null);
+// The same figures as they stood a month ago: reels posted 30+ days ago, same window rules.
+const ageAt = (r, back) => (now - dt(r.posted)) / DAY - back;
+const thenR = R.filter(r => ageAt(r, 30) >= 0);
+const thenRecent = thenR.filter(r => ageAt(r, 30) <= 90 && ageAt(r, 30) >= 3);
+const thenPool = thenRecent.length >= 3 ? thenRecent : thenR;
+const prevMain = avg(thenPool.map(r => val(r)).filter(v => v != null));
+const prevEng = avg(thenPool.map(r => r.total && r.total.engagement).filter(v => v != null));
+const lastMonth = (cur, prev, show) => (prev == null || cur == null) ? "" :
+  `<div class="lm">${cur > prev ? '<span class="up" aria-label="up from last month">&#9650;</span>' : ""}Last month ${show(prev)}</div>`;
 const total = R.map(r => val(r)).filter(v => v != null).reduce((s, x) => s + x, 0);
 const first = R.length ? dt(R[R.length - 1].posted) : new Date();
 const contact = D.contact ? `<a class="btn" href="mailto:${esc(D.contact)}?subject=${encodeURIComponent("Partnership with @" + P.username)}">Contact for partnerships</a>` : "";
@@ -44,8 +53,8 @@ let html = `
 </section>
 <div class="script">media kit</div>
 <section class="board glass">
-  <div><div class="v">${fmt(avg(mains))}</div><div class="k">Average ${MAIN_LABEL} per reel</div></div>
-  ${engs.length ? `<div><div class="v">${pct(avg(engs))}</div><div class="k">Engagement rate</div></div>`
+  <div><div class="v">${fmt(avg(mains))}</div><div class="k">Average ${MAIN_LABEL} per reel</div>${lastMonth(avg(mains), prevMain, fmt)}</div>
+  ${engs.length ? `<div><div class="v">${pct(avg(engs))}</div><div class="k">Engagement rate</div>${lastMonth(avg(engs), prevEng, pct)}</div>`
                : `<div><div class="v">${R.length}</div><div class="k">Reels published</div></div>`}
   <div><div class="v">${fmt(total)}</div><div class="k">Total ${MAIN_LABEL} across reels</div></div>
   <div><div class="v">${fmt(Math.max(...R.map(r => val(r) ?? 0)))}</div><div class="k">${MAIN_LABEL[0].toUpperCase() + MAIN_LABEL.slice(1)} on top reel</div></div>
@@ -57,24 +66,29 @@ if (keys.length) {
   let DN = null; try { DN = new Intl.DisplayNames(["en"], { type: "region" }); } catch (e) {}
   const COUNTRY = new Proxy({}, { get: (_, k) => { try { return DN ? DN.of(k) : k; } catch (e) { return k; } } });
   const _OLD = { US: "United States", CA: "Canada", GB: "United Kingdom", AU: "Australia", MX: "Mexico", DE: "Germany", FR: "France", BR: "Brazil", IN: "India", KE: "Kenya" };
-  const bars = (obj, { sortByValue = true, top = 6, names = {} } = {}) => {
-    let rows = Object.entries(obj); const tot = rows.reduce((s, [, v]) => s + v, 0);
+  const PREV = D.demo_prev || {}, hasPrev = Object.keys(PREV).length > 0;
+  const share = (obj, k) => { const t = Object.values(obj || {}).reduce((s, x) => s + x, 0); return t ? (obj[k] || 0) / t : 0; };
+  // Month-over-month change in percentage points; green arrow only when it went up.
+  const change = (p, prevObj, k) => { if (!prevObj) return ""; const d = Math.round((p - share(prevObj, k)) * 100);
+    return d > 0 ? `<span class="chg"><span class="up">&#9650;</span> +${d} pts</span>` : `<span class="chg">${d === 0 ? "no change" : d + " pts"}</span>`; };
+  const bars = (obj, { sortByValue = true, top = 6, names = {}, key } = {}) => {
+    let rows = Object.entries(obj); const tot = rows.reduce((s, [, v]) => s + v, 0), pv = PREV[key];
     rows = sortByValue ? rows.sort((a, b) => b[1] - a[1]).slice(0, top) : rows.sort();
     const peak = Math.max(...rows.map(r => r[1]));
-    return `<div class="glass panel bars">${rows.map(([k, v]) => `<div class="row"><span class="lbl">${esc((names[k] || k).split(",")[0])}</span>
-      <span class="track"><span class="fill" style="display:block;width:${(v / peak * 100).toFixed(1)}%"></span></span><span class="pct">${v / tot < .005 ? "<1" : Math.round(v / tot * 100)}%</span></div>`).join("")}</div>`;
+    return `<div class="glass panel bars${pv ? " mom" : ""}">${rows.map(([k, v]) => `<div class="row"><span class="lbl">${esc((names[k] || k).split(",")[0])}</span>
+      <span class="track"><span class="fill" style="display:block;width:${(v / peak * 100).toFixed(1)}%"></span></span><span class="pct">${v / tot < .005 ? "<1" : Math.round(v / tot * 100)}%</span>${change(v / tot, pv, k)}</div>`).join("")}</div>`;
   };
-  html += `<h2>Who's watching</h2><p class="lede">${D.demo_source === "viewers" ? "Accounts that viewed your posts and reels this month, as reported by Instagram." : "Follower breakdown reported by Instagram."}</p><div class="cols"><div>`;
-  if (demo.age) html += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false });
+  html += `<h2>Who's watching</h2><p class="lede">${D.demo_source === "viewers" ? "Accounts that viewed your posts and reels this month, as reported by Instagram." : "Follower breakdown reported by Instagram."} ${hasPrev ? `Changes compare with ${esc(D.demo_prev_month)}.` : "Month-over-month changes appear once last month's numbers are saved."}</p><div class="cols"><div>`;
+  if (demo.age) html += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false, key: "age" });
   if (demo.gender) {
     const g = demo.gender, t = Object.values(g).reduce((s, x) => s + x, 0), m = (g.M || 0) / t, f = (g.F || 0) / t;
     html += `<h3 style="margin-top:18px">Gender</h3><div class="glass panel"><div style="display:flex;height:8px;margin:6px 0 10px">
       <span style="width:${m * 100}%;background:var(--fern)"></span><span style="width:${f * 100}%;background:var(--moss)"></span><span style="flex:1;background:var(--ivy)"></span></div>
-      <div class="na" style="font-size:.92rem;color:var(--stone)">Men ${Math.round(m * 100)}% &nbsp; Women ${Math.round(f * 100)}%</div></div>`;
+      <div class="na" style="font-size:.92rem;color:var(--stone)">Men ${Math.round(m * 100)}%${change(m, PREV.gender, "M")} &nbsp; Women ${Math.round(f * 100)}%${change(f, PREV.gender, "F")}</div></div>`;
   }
   html += `</div><div>`;
-  if (demo.city) html += `<h3>Top cities</h3>` + bars(demo.city);
-  if (demo.country) html += `<h3 style="margin-top:18px">Top countries</h3>` + bars(demo.country, { top: 5, names: COUNTRY });
+  if (demo.city) html += `<h3>Top cities</h3>` + bars(demo.city, { key: "city" });
+  if (demo.country) html += `<h3 style="margin-top:18px">Top countries</h3>` + bars(demo.country, { top: 5, names: COUNTRY, key: "country" });
   html += `</div></div>`;
 }
 

@@ -8,7 +8,7 @@ import json
 import os
 import shutil
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -91,11 +91,20 @@ def build():
     viewers = {k.split(":", 1)[1]: v for k, v in all_demo.items() if k.startswith("viewers:")}
     demo = viewers or {k: v for k, v in all_demo.items() if ":" not in k}
     demo_source = "viewers" if viewers else "followers"
+    # Last month's breakdown for the same audience, for month-over-month change.
+    today_d = datetime.now(TZ).date()
+    prev_month = (today_d.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+    demo_prev = {}
+    for r in conn.execute("SELECT breakdown, label, value FROM demographics_monthly WHERE month=? AND audience=?",
+                          (prev_month, demo_source)):
+        demo_prev.setdefault(r["breakdown"], {})[r["label"]] = r["value"]
+    prev_month_name = datetime.strptime(prev_month + "-01", "%Y-%m-%d").strftime("%B")
 
     data = {
         "profile": {"name": setting("profile_name"), "username": setting("profile_username"),
                     "bio": setting("profile_biography"), "pic": setting("profile_profile_picture_url")},
-        "followers": followers, "daily": daily, "demographics": demo, "demo_source": demo_source, "reels": reels,
+        "followers": followers, "daily": daily, "demographics": demo, "demo_source": demo_source,
+        "demo_prev": demo_prev, "demo_prev_month": prev_month_name, "reels": reels,
         "contact": os.getenv("CONTACT_EMAIL") or None, "tagline": os.getenv("CREATOR_TAGLINE") or None,
         "updated": datetime.now(timezone.utc).astimezone(TZ).strftime("%B %-d, %Y"),
     }
