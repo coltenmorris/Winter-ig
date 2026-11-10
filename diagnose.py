@@ -18,8 +18,9 @@ load_dotenv()
 def show(label, fn):
     try:
         out = json.dumps(fn())
-        vals = [(d.get("name"), (d.get("values") or [{}])[0].get("value", d.get("total_value")))
-                for d in (fn_out.get("data", []) if isinstance(fn_out := json.loads(out), dict) else [])]
+        res = json.loads(out)
+        rows = res.get("data", []) if isinstance(res, dict) else []
+        vals = [(d.get("name"), (d.get("values") or [{}])[0].get("value", d.get("total_value"))) for d in rows]
         print(f"OK   {label}: {vals if vals else out[:300]}")
     except InstagramError as e:
         print(f"FAIL {label}: {e}")
