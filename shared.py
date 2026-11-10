@@ -55,8 +55,24 @@ def _load(_mtime: float):
     conn.close()
     for df in (snaps, acct, daily):
         df["captured_date"] = pd.to_datetime(df["captured_date"])
+    snaps = clean_snaps(snaps)
     media["posted_at"] = pd.to_datetime(media["posted_at"], utc=True).dt.tz_convert(LOCAL_TZ).dt.tz_localize(None)
     return media, snaps, acct, daily, demo, profile
+
+
+def clean_snaps(s: pd.DataFrame) -> pd.DataFrame:
+    """Instagram sometimes returns 0 for metrics it doesn't supply. Treat impossible zeros as missing
+    and rebuild total interactions from its parts so engagement is never understated."""
+    if s.empty:
+        return s
+    s = s.copy()
+    has_views = s["views"].fillna(0) > 0
+    for col in ("reach", "avg_watch_ms", "total_watch_ms", "skip_rate"):
+        s.loc[has_views & (s[col].fillna(0) == 0), col] = None
+    s.loc[(s["likes"].fillna(0) > 0) & (s["saved"].fillna(0) == 0) & (s["reach"].isna()), "saved"] = None
+    parts = s[["likes", "comments", "shares", "saved"]].fillna(0).sum(axis=1)
+    s["total_interactions"] = pd.concat([s["total_interactions"].fillna(0), parts], axis=1).max(axis=1)
+    return s
 
 
 def video_table(media: pd.DataFrame, snaps: pd.DataFrame, window_days: int = 7) -> pd.DataFrame:

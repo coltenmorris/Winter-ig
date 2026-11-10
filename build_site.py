@@ -29,10 +29,15 @@ def stats(row: sqlite3.Row | None) -> dict | None:
     if row is None:
         return None
     d = {k: num(row[k]) for k in METRICS}
-    inter = d["total_interactions"]
-    if inter is None:
-        parts = [d[k] for k in ("likes", "comments", "shares", "saved") if d[k] is not None]
-        inter = sum(parts) if parts else None
+    # Instagram returns 0 for metrics it doesn't supply; treat impossible zeros as missing.
+    if d["views"]:
+        for k in ("reach", "avg_watch_ms", "skip_rate"):
+            if not d[k]:
+                d[k] = None
+        if d["reach"] is None and not d["saved"] and d["likes"]:
+            d["saved"] = None
+    parts = [d[k] for k in ("likes", "comments", "shares", "saved") if d[k] is not None]
+    inter = max(d["total_interactions"] or 0, sum(parts)) if (parts or d["total_interactions"]) else None
     d["interactions"] = inter
     d["engagement"] = round(inter / d["views"], 4) if inter is not None and d["views"] else None
     d["watch_s"] = round(d["avg_watch_ms"] / 1000, 1) if d["avg_watch_ms"] else None
