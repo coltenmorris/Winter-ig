@@ -156,7 +156,7 @@ a {{ color: {FERNB}; }}
 .hero .id h1 {{ font-size: clamp(3rem, 8.2vw, 6.6rem) !important; line-height: .9 !important; letter-spacing: -.055em; margin: 0 !important; padding: 0 !important; }}
 .hero .id .row {{ display:flex; align-items:center; gap: 14px; margin-top: 22px; }}
 .hero .id .handle {{ color: {STONE}; font-weight: 500; }}
-.hero .id .bio {{ margin-top: 14px; max-width: 42ch; }}
+.hero .id .bio {{ margin-top: 14px; max-width: 42ch; white-space: pre-line; }}
 .hero .avatar {{ width:44px; height:44px; border-radius:50%; object-fit:cover; order:-1; border:1px solid {RULE_C};
     display:flex; align-items:center; justify-content:center; background:{IVY}; color:{MIST}; font-weight:700; }}
 .hero .count .n {{ font-size: clamp(4rem, 11vw, 9rem); font-weight: 800; line-height: .82; letter-spacing: -.06em; color: {FERNB}; }}
@@ -254,21 +254,30 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 @media (prefers-reduced-motion: reduce) {{ .live .dot {{ animation: none; }} }}
 .live-n {{ font-size: clamp(3rem, 9vw, 5.6rem); font-weight: 800; letter-spacing: -.055em; line-height: .95; color:{FERNB};
            font-variant-numeric: tabular-nums; margin-top: 6px; }}
-/* Odometer: changed digits roll vertically */
-.live-n {{ display:flex; align-items:flex-start; }}
+/* Odometer: changed digits roll vertically. The window is taller than the text so glyphs never clip. */
+.live-n {{ display:flex; align-items:flex-start; --row: 1.18em; line-height: var(--row) !important; }}
 .live-n .d, .live-n .d span {{ color:{FERNB} !important; }}
-.live-n .d {{ display:inline-block; height:1em; line-height:1em; overflow:hidden; clip-path: inset(0); contain: paint; vertical-align: top; }}
+.live-n .d {{ display:inline-block; height: var(--row); line-height: var(--row); overflow:hidden; clip-path: inset(0); contain: paint; }}
+.live-n .d.sep {{ font-feature-settings: "tnum" 0, "pnum" 1; font-variant-numeric: proportional-nums; }}
 .live-n .roll .reel {{ display:flex; flex-direction:column; will-change: transform; }}
-.live-n .roll .reel > span {{ display:block; height:1em; line-height:1em; }}
+.live-n .roll .reel > span {{ display:block; height: var(--row); line-height: var(--row); }}
 .live-n .roll.up .reel {{ animation: roll-up .9s cubic-bezier(.2,.8,.2,1) both, flash 1.8s ease-out both; }}
 .live-n .roll.down .reel {{ animation: roll-down .9s cubic-bezier(.2,.8,.2,1) both; }}
-@keyframes roll-up {{ from {{ transform: translateY(0); }} to {{ transform: translateY(-1em); }} }}
-@keyframes roll-down {{ from {{ transform: translateY(-1em); }} to {{ transform: translateY(0); }} }}
+@keyframes roll-up {{ from {{ transform: translateY(0); }} to {{ transform: translateY(calc(-1 * var(--row))); }} }}
+@keyframes roll-down {{ from {{ transform: translateY(calc(-1 * var(--row))); }} to {{ transform: translateY(0); }} }}
 @keyframes flash {{ from {{ filter: brightness(1.45); }} to {{ filter: brightness(1); }} }}
 @media (prefers-reduced-motion: reduce) {{
-  .live-n .roll.up .reel {{ animation: none !important; transform: translateY(-1em); }}
+  .live-n .roll.up .reel {{ animation: none !important; transform: translateY(calc(-1 * var(--row))); }}
   .live-n .roll.down .reel {{ animation: none !important; transform: translateY(0); }}
 }}
+/* Live count in the media kit hero, in place of the big follower number */
+.hero.solo {{ grid-template-columns: 1fr; }}
+.live-hero {{ text-align:right; padding: 0 0 6px; }}
+.live-hero .live-n {{ justify-content:flex-end; font-size: clamp(4rem, 11vw, 9rem); font-weight: 800; letter-spacing: -.06em; }}
+.live-hero .l {{ color:{STONE}; margin-top: 4px; font-weight: 500; display:flex; gap:8px; align-items:center; justify-content:flex-end; }}
+.live-hero .dot {{ width:8px; height:8px; border-radius:50%; background:#7CC47F; animation: livepulse 2s infinite; }}
+@media (prefers-reduced-motion: reduce) {{ .live-hero .dot {{ animation: none; }} }}
+@media (max-width: 760px) {{ .live-hero {{ text-align:left; }} .live-hero .live-n, .live-hero .l {{ justify-content:flex-start; }} }}
 .live-sub {{ color:{STONE}; font-size:.85rem; margin-top: 8px; line-height:1.5; }}
 
 /* Period summary */

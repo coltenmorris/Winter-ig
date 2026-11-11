@@ -79,15 +79,14 @@ avatar = (f'<img class="avatar" src="{esc(pic)}" alt="" referrerpolicy="no-refer
           else f'<div class="avatar">{esc((name or handle)[:1].upper())}</div>')
 contact = (f'<a class="contact" href="mailto:{esc(email)}?subject=Partnership%20with%20%40{esc(handle)}">'
            f'Contact for partnerships</a>' if email else "")
-st.markdown(f"""
-<div class="hero">
-  <div class="count glass">
+count_html = f"""  <div class="count glass">
     <span class="px"></span>
     <div class="n">{fmt_num(followers)}</div>
     <div class="l">followers on Instagram</div>
     <div class="stripes short" style="margin-top:22px"></div>
   </div>
-  <div class="id glass">
+"""
+id_html = f"""  <div class="id glass">
     <h1>{esc(name or handle)}</h1>
     <div class="stripes" style="margin-top:14px"></div>
     <div class="row"><span class="handle">@{esc(handle)}</span>{avatar}</div>
@@ -95,8 +94,8 @@ st.markdown(f"""
     {f'<div class="created">Account created {esc(created)}</div>' if created else ''}
     {contact}
   </div>
-</div>
-<div class="board glass{' five' if v30_label.startswith('Views in') else ''}">
+"""
+board_html = f"""<div class="board glass{' five' if v30_label.startswith('Views in') else ''}">
   <div><div class="v">{fmt_num(avg_views)}</div><div class="k">Average {MAIN_L} per reel</div>{last_month(avg_views, prev_avg, fmt_num)}</div>
   {f'<div><div class="v">{eng:.1%}</div><div class="k">Engagement rate</div>{last_month(eng, prev_eng, lambda x: f"{x:.1%}")}</div>' if eng is not None and eng == eng
      else f'<div><div class="v">{len(t)}</div><div class="k">Reels published</div></div>'}
@@ -105,7 +104,19 @@ st.markdown(f"""
   {f'<div><div class="v">+{fmt_num(gained)}</div><div class="k">New followers in 30 days</div><div class="d">{growth_pct:+.1%} growth</div></div>'
      if len(acct) > 1 else f'<div><div class="v">{fmt_num(best_reel)}</div><div class="k">{MAIN_L.capitalize()} on top reel</div></div>'}
 </div>
-""", unsafe_allow_html=True)
+"""
+live_on = st.session_state.get("live_kit", False)
+if live_on:
+    # Live count takes the place of the big follower number (switch is at the bottom of the page)
+    from live import live_followers
+    left, right = st.columns([7, 5], vertical_alignment="bottom")
+    with left:
+        st.markdown(f'<div class="hero solo">{id_html}</div>', unsafe_allow_html=True)
+    with right:
+        live_followers(int(followers), hero=True)
+    st.markdown(board_html, unsafe_allow_html=True)
+else:
+    st.markdown(f'<div class="hero">{count_html}{id_html}</div>{board_html}', unsafe_allow_html=True)
 
 # ---------------- audience ----------------
 def change(p, prev_share):
@@ -347,6 +358,5 @@ st.markdown(f'<div class="foot">Numbers come directly from the Instagram API and
             f'Last updated {updated:%B %-d, %Y}.</div>', unsafe_allow_html=True)
 
 # ---------------- live follower count (off by default, switch at the very bottom) ----------------
-if st.toggle("Show live follower count", value=False, key="live_kit"):
-    from live import live_followers
-    live_followers(int(acct["followers"].iloc[-1]) if not acct.empty else None)
+st.toggle("Show live follower count", value=False, key="live_kit",
+          help="Replaces the follower number at the top with a live count that updates every 30 seconds.")

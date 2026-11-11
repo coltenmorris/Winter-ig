@@ -38,7 +38,9 @@ def odometer_html(prev: int, n: int) -> str:
     for o, c in zip(old, new):
         if c == " ":
             continue  # digit that disappeared (e.g. 1,000 -> 999)
-        if o == c or not c.isdigit():
+        if not c.isdigit():
+            out.append(f'<span class="d sep">{c}</span>')  # comma keeps its natural width
+        elif o == c:
             out.append(f'<span class="d">{c}</span>')
         else:
             # stack old and new; the roll animation slides from one to the other
@@ -48,7 +50,8 @@ def odometer_html(prev: int, n: int) -> str:
     return "".join(out)
 
 
-def live_followers(synced_followers: int | None):
+def live_followers(synced_followers: int | None, hero: bool = False):
+    """Rolling live follower count. hero=True renders it as the media kit's big follower number."""
     token = clean_token(cfg("IG_ACCESS_TOKEN"))
     if not token:
         st.caption("Live follower count: add IG_ACCESS_TOKEN to this app's Secrets to turn it on.")
@@ -59,11 +62,22 @@ def live_followers(synced_followers: int | None):
         try:
             n = _count(token)
         except InstagramError as e:
-            st.caption(f"Live follower count is unavailable right now: {e}")
+            if hero and synced_followers is not None:
+                st.markdown(f'<div class="live-hero"><div class="live-n">{synced_followers:,}</div>'
+                            f'<div class="l">followers on Instagram</div></div>', unsafe_allow_html=True)
+            else:
+                st.caption(f"Live follower count is unavailable right now: {e}")
             return
+        key = "live_prev_hero" if hero else "live_prev"
         start = st.session_state.setdefault("live_start", n)
-        prev = st.session_state.get("live_prev", n)
-        st.session_state["live_prev"] = n
+        prev = st.session_state.get(key, n)
+        st.session_state[key] = n
+        if hero:
+            st.markdown(f"""<div class="live-hero">
+              <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n)}</div>
+              <div class="l"><span class="dot" aria-hidden="true"></span>live followers on Instagram</div></div>""",
+                        unsafe_allow_html=True)
+            return
         now = datetime.now(ZoneInfo("America/New_York")).strftime("%-I:%M:%S %p")
         bits = []
         if n != start:
