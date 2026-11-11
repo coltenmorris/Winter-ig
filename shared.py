@@ -312,7 +312,12 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 [data-testid="stMarkdownContainer"]:has(.live-hero), [data-testid="stMarkdownContainer"]:has(.live) {{ overflow: visible !important; }}
 .live-hero .l {{ color:{STONE}; margin-top: 4px; font-weight: 500; display:flex; gap:8px; align-items:center; justify-content:flex-end; }}
 .live-hero .dot {{ width:8px; height:8px; border-radius:50%; background:#7CC47F; animation: livepulse 2s infinite; }}
-@media (prefers-reduced-motion: reduce) {{ .live-hero .dot {{ animation: none; }} }}
+.live-banner {{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding: 8px 14px; margin-bottom: 18px;
+  border: 1px solid rgba(124,196,127,.35); background: rgba(124,196,127,.08); color:{MIST}; font-size:.9rem; }}
+.live-banner b {{ font-weight: 700; }}
+.live-banner span:not(.dot) {{ color:{STONE}; }}
+.live-banner .dot {{ width:8px; height:8px; border-radius:50%; background:#7CC47F; animation: livepulse 2s infinite; }}
+@media (prefers-reduced-motion: reduce) {{ .live-hero .dot, .live-banner .dot {{ animation: none; }} }}
 @media (max-width: 760px) {{ .live-hero {{ text-align:left; }} .live-hero .live-n, .live-hero .l {{ justify-content:flex-start; }} }}
 .live-sub {{ color:{STONE}; font-size:.85rem; margin-top: 8px; line-height:1.5; }}
 

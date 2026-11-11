@@ -103,7 +103,10 @@ board_html = f"""<div class="board glass{' five' if v30_label.startswith('Views 
 live_on = st.session_state.get("live_kit", False)
 if live_on:
     # Live count takes the place of the big follower number (switch is at the bottom of the page)
-    from live import live_followers
+    from live import REFRESH_SECONDS, live_followers
+    st.markdown(f'<div class="live-banner" role="status"><span class="dot" aria-hidden="true"></span>'
+                f'<b>Live tracker</b><span>Follower count updates every {REFRESH_SECONDS} seconds</span></div>',
+                unsafe_allow_html=True)
     left, right = st.columns([7, 5], vertical_alignment="bottom")
     with left:
         st.markdown(f'<div class="hero solo">{id_html}</div>', unsafe_allow_html=True)
