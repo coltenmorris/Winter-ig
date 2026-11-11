@@ -118,3 +118,25 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   wrap.appendChild(lab);
 });
+
+// Left-edge section rail (analytics page): built from the page's section headings.
+function sectionRail() {
+  const hs = [...document.querySelectorAll(".wrap h2")];
+  if (hs.length < 3) return;
+  const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  hs.forEach(h => { if (!h.id) h.id = slug(h.textContent); });
+  const zone = document.createElement("div"); zone.className = "rail-zone"; zone.setAttribute("aria-hidden", "true");
+  const nav = document.createElement("nav"); nav.className = "rail"; nav.setAttribute("aria-label", "Sections");
+  nav.innerHTML = hs.map(h => `<a href="#${h.id}">${esc(h.textContent)}</a>`).join("");
+  document.body.append(zone, nav);
+  const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  nav.addEventListener("click", e => { const a = e.target.closest("a"); if (!a) return; e.preventDefault();
+    document.getElementById(a.hash.slice(1)).scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+    history.replaceState(null, "", a.hash); });
+  // Mark the section currently on screen
+  const links = new Map([...nav.querySelectorAll("a")].map(a => [a.hash.slice(1), a]));
+  const mark = () => { let cur = hs[0];
+    for (const h of hs) if (h.getBoundingClientRect().top < innerHeight * 0.35) cur = h;
+    links.forEach((a, id) => a.setAttribute("aria-current", id === cur.id)); };
+  addEventListener("scroll", mark, { passive: true }); mark();
+}

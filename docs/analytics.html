@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Creator Analytics</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="style.css?v=202611111720">
-<link rel="stylesheet" href="thermal.css?v=202611111720">
+<link rel="stylesheet" href="style.css?v=202611111722">
+<link rel="stylesheet" href="thermal.css?v=202611111722">
 <script>try{if(localStorage.getItem("bg")==="static")document.documentElement.classList.add("bg-static")}catch(e){}</script>
 </head>
 <body>
@@ -67,7 +67,7 @@
   <div class="glass" id="list"></div>
   <div class="foot">Data from the Instagram API, refreshed by the daily sync.</div>
 </div>
-<script src="data.js?v=202611111720"></script>
+<script src="data.js?v=202611111722"></script>
 <script>
 if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -81,10 +81,11 @@ if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   window.__EMPTY = true;
 }
 </script>
-<script src="common.js?v=202611111720"></script>
+<script src="common.js?v=202611111722"></script>
 <script>
 if (!window.__EMPTY) {
 mark("an");
+setTimeout(sectionRail);
 const ALL = D.reels, R = ALL.filter(r => r.kind !== "post"), $ = id => document.getElementById(id);
 $("updated").textContent = `Updated ${D.updated}. ${R.length} reels tracked.`;
 if (!HAS_VIEWS) $("warn").innerHTML = `<div class="glass warn">Instagram isn't returning views, reach or watch time yet, so likes are shown instead.

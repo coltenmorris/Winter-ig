@@ -1,6 +1,7 @@
 """Shared data loading, metrics, config and styling for both pages."""
 import html
 import os
+import re
 from pathlib import Path
 
 import altair as alt
@@ -363,6 +364,21 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 .scard dl {{ display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin: 6px 0 0; font-size: .82rem; }}
 .scard dt {{ color: {STONE}; }} .scard dd {{ margin: 0; text-align: right; font-variant-numeric: tabular-nums; }}
 .board.four {{ grid-template-columns: repeat(4, 1fr); }}
+/* Section rail: hover near the left edge (mouse/trackpad screens only) */
+.rail-zone, .rail {{ display: none; }}
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) {{
+  .rail-zone {{ display: block; position: fixed; left: 0; top: 0; bottom: 0; width: 40px; z-index: 990; }}
+  .rail {{ display: flex; flex-direction: column; gap: 2px; position: fixed; left: 14px; top: 50%; z-index: 991;
+    transform: translate(-12px, -50%); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+    padding: 12px; background: rgba(20, 28, 23, .55); border: 1px solid {RULE_C};
+    -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2); }}
+  .rail-zone:hover + .rail, .rail:hover, .rail:focus-within {{ opacity: 1; pointer-events: auto; transform: translate(0, -50%); }}
+  .rail a {{ display: block; padding: 7px 12px; color: {STONE} !important; text-decoration: none !important; font-size: .88rem;
+    font-weight: 500; white-space: nowrap; }}
+  .rail a:hover {{ color: {MIST} !important; background: rgba(211, 219, 207, .06); }}
+}}
+@media (prefers-reduced-motion: reduce) {{ .rail {{ transition: none; }} }}
+h2 {{ scroll-margin-top: 24px; }}
 </style>""", unsafe_allow_html=True)
     thermal_background()
 
@@ -506,3 +522,12 @@ def show_few_button(df, key: str, n: int = 5):
     if st.button("Show less" if is_open else f"Show {len(df) - n} more", key=key + "_btn"):
         st.session_state[key] = not is_open
         st.rerun()
+
+
+def section_rail(titles: list[str]):
+    """Translucent list of the page's sections that slides in when the mouse nears the left edge (PC only).
+    Links go to Streamlit's built-in heading anchors."""
+    slug = lambda t: re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")
+    links = "".join(f'<a href="#{slug(t)}" target="_self">{html.escape(t)}</a>' for t in titles)
+    st.markdown(f'<div class="rail-zone" aria-hidden="true"></div><nav class="rail" aria-label="Sections">{links}</nav>',
+                unsafe_allow_html=True)

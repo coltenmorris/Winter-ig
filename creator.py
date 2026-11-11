@@ -8,7 +8,7 @@ import flags as flags_mod
 from ig_client import InstagramError
 import html
 
-from shared import (show_few, show_few_button, DUSK, FERN, MOSS, SAGE, SAND, fmt_num, load, private_nav, reel_dialog,
+from shared import (section_rail, show_few, show_few_button, DUSK, FERN, MOSS, SAGE, SAND, fmt_num, load, private_nav, reel_dialog,
                     require_password, video_table)
 from sync import run_sync
 
@@ -56,6 +56,7 @@ if settled.empty:
     settled = t
 
 # ---------------- period summary ----------------
+_rail_extra = []
 st.markdown("## Summary by period")
 st.markdown('<p class="lede">Videos grouped by when you posted them, with their views, likes and engagement to date. '
             'Followers come from the daily sync, so periods before tracking started show a dash.</p>',
@@ -252,6 +253,7 @@ with b:
 
 # ---------------- trial vs regular ----------------
 if t["is_trial"].sum() > 0:
+    _rail_extra.append("Trial reels vs regular reels")
     st.markdown("## Trial reels vs regular reels")
     cols = st.columns(2)
     for col, (flag, name) in zip(cols, [(0, "Regular reels"), (1, "Trial reels")]):
@@ -286,3 +288,5 @@ for i, r in show_few(order, "reels_open", 10).iterrows():
                 f'<span class="n hide-sm">{r["engagement_rate"]:.1%}</span><span class="n hide-sm">{watch}</span></div>')
 st.markdown('<div class="glass">' + "".join(rows) + "</div>", unsafe_allow_html=True)
 show_few_button(order, "reels_open", 10)
+section_rail(["Summary by period", "Stories", "When to post", "What your audience responds to"]
+             + (["Trial reels vs regular reels"] if "Trial reels vs regular reels" in _rail_extra else []) + ["All reels"])
