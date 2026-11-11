@@ -1,6 +1,7 @@
 """Shared data loading, metrics, config and styling for both pages."""
 import html
 import os
+from pathlib import Path
 
 import altair as alt
 import pandas as pd
@@ -119,6 +120,24 @@ def fmt_num(n) -> str:
 # ---------------- styling (neo-Swiss) ----------------
 FONT = "Schibsted Grotesk"
 FONT_DISPLAY = FONT
+
+
+THERMAL_CSS = (Path(__file__).parent / "thermal.css").read_text()
+
+
+def thermal_background():
+    """Moving thermal gradient behind every page, or a plain color when switched off at the bottom."""
+    moving = st.session_state.get("bg_moving", True)
+    st.markdown(f"<style>{THERMAL_CSS}"
+                + ("" if moving else ".thermal { display: none; }")
+                + '[data-testid="stMain"], [data-testid="stHeader"] { position: relative; z-index: 1; }</style>'
+                + '<div class="thermal" aria-hidden="true"><i></i><i></i><i></i></div>',
+                unsafe_allow_html=True)
+
+
+def background_switch():
+    st.toggle("Moving background", value=True, key="bg_moving",
+              help="Turn off for a plain static background color.")
 
 
 def inject_css():
@@ -331,6 +350,7 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
   table.ms td {{ font-size: .98rem; }}
 }}
 </style>""", unsafe_allow_html=True)
+    thermal_background()
 
 
 def chart_theme():

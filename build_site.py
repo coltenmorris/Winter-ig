@@ -132,7 +132,7 @@ def build():
             if f.suffix == ".html":
                 # Version the asset links so browsers fetch fresh data after each sync.
                 text = f.read_text()
-                for asset in ("data.js", "common.js", "style.css"):
+                for asset in ("data.js", "common.js", "style.css", "thermal.css"):
                     text = text.replace(f'"{asset}"', f'"{asset}?v={stamp}"')
                 (OUT / f.name).write_text(text)
             else:

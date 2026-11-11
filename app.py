@@ -1,7 +1,7 @@
 """Entry point.  Run with:  streamlit run app.py"""
 import streamlit as st
 
-from shared import chart_theme, inject_css
+from shared import background_switch, chart_theme, inject_css
 
 st.set_page_config(page_title="Media Kit", page_icon="🌿", layout="wide")
 inject_css()
@@ -13,3 +13,4 @@ nav = st.navigation([
     st.Page("calendar_page.py", title="Posting calendar", url_path="calendar"),
 ], position="hidden")
 nav.run()
+background_switch()  # bottom of every page

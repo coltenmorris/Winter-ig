@@ -88,3 +88,17 @@ function openReel(id) {
   </div>`;
   dlg.showModal();
 }
+
+// Bottom switch: moving thermal background (default) or a plain static color. Remembered per browser.
+document.addEventListener("DOMContentLoaded", () => {
+  const wrap = document.querySelector(".wrap"); if (!wrap) return;
+  const lab = document.createElement("label"); lab.className = "bgswitch";
+  lab.innerHTML = `<input type="checkbox" role="switch"> Moving background`;
+  const box = lab.querySelector("input");
+  box.checked = !document.documentElement.classList.contains("bg-static");
+  box.addEventListener("change", () => {
+    document.documentElement.classList.toggle("bg-static", !box.checked);
+    try { localStorage.setItem("bg", box.checked ? "moving" : "static"); } catch (e) {}
+  });
+  wrap.appendChild(lab);
+});

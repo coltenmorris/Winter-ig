@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Creator Analytics</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="style.css?v=202611110547">
+<link rel="stylesheet" href="style.css?v=202611110652">
+<link rel="stylesheet" href="thermal.css?v=202611110652">
+<script>try{if(localStorage.getItem("bg")==="static")document.documentElement.classList.add("bg-static")}catch(e){}</script>
 </head>
 <body>
+<div class="thermal" aria-hidden="true"><i></i><i></i><i></i></div>
 <div class="wrap">
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
   <h1 style="font-size:clamp(2.6rem,7vw,5rem);line-height:.92;letter-spacing:-.05em">Creator analytics</h1>
@@ -59,7 +62,7 @@
   <div class="glass" id="list"></div>
   <div class="foot">Data from the Instagram API, refreshed by the daily sync.</div>
 </div>
-<script src="data.js?v=202611110547"></script>
+<script src="data.js?v=202611110652"></script>
 <script>
 if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -73,7 +76,7 @@ if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   window.__EMPTY = true;
 }
 </script>
-<script src="common.js?v=202611110547"></script>
+<script src="common.js?v=202611110652"></script>
 <script>
 if (!window.__EMPTY) {
 mark("an");

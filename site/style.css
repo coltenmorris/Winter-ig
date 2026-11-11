@@ -27,7 +27,7 @@ img { max-width: 100%; }
 a { color: var(--fern); text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--lamp); outline-offset: 3px; }
 
-.wrap { max-width: 1120px; margin: 0 auto; padding: 28px 32px 72px; }
+.wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 28px 32px 72px; }
 nav.top { display: flex; gap: 24px; align-items: baseline; border-bottom: 1px solid var(--rule); padding-bottom: 14px; margin-bottom: 44px; font-size: .92rem; }
 nav.top::before { content: attr(data-handle); font-weight: 700; margin-right: auto; letter-spacing: -.01em; }
 nav.top a { text-decoration: none; color: var(--stone); font-weight: 500; }
@@ -246,3 +246,10 @@ table.ms td { font-size: 1.15rem; font-weight: 700; letter-spacing: -.03em; }
   .mbody { padding: 18px 16px; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* background switch at the bottom of each page */
+.bgswitch { display: flex; align-items: center; gap: 12px; margin-top: 28px; color: var(--stone); font-size: .9rem; cursor: pointer; width: fit-content; }
+.bgswitch input { appearance: none; width: 38px; height: 22px; border-radius: 11px; background: var(--ivy); position: relative; cursor: pointer; margin: 0; transition: background .2s; }
+.bgswitch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--mist); transition: transform .2s; }
+.bgswitch input:checked { background: var(--moss); }
+.bgswitch input:checked::after { transform: translateX(16px); }
