@@ -3,6 +3,7 @@
 Asks Instagram for the current follower count every 5 seconds using the IG_ACCESS_TOKEN
 Streamlit secret. The token stays on the server; it is never sent to the browser.
 """
+import html
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -74,20 +75,26 @@ def live_followers(synced_followers: int | None, hero: bool = False):
 
     @st.fragment(run_every=REFRESH_SECONDS)
     def ticker():
+        key = "live_prev_hero" if hero else "live_prev"
         try:
             n = _live_count(token)
-        except Exception as e:  # never let the ticker break the page
-            if hero and synced_followers is not None:
-                print(f"[live followers] {type(e).__name__}: {e}", flush=True)
-                st.markdown(f'<div class="live-hero"><div class="live-n">{synced_followers:,}</div>'
-                            f'<div class="l">followers on Instagram</div></div>', unsafe_allow_html=True)
+        except Exception as e:  # never let the ticker break the page, and never pass an old number off as live
+            print(f"[live followers] {type(e).__name__}: {e}", flush=True)  # shows in Manage app > logs
+            last = st.session_state.get(key)
+            shown = last if last is not None else synced_followers
+            why = html.escape(str(e))[:160]
+            note = ("last live count" if last is not None else "count from the last daily sync")
+            if hero and shown is not None:
+                st.markdown(f"""<div class="live-hero"><div class="live-n">{shown:,}</div>
+                  <div class="l">followers on Instagram</div>
+                  <div class="live-banner paused" role="status"><span class="dot" aria-hidden="true"></span><b>Live tracker paused</b>
+                  <span>Showing the {note}, retrying every {REFRESH_SECONDS} seconds</span></div>
+                  <div class="live-why">Instagram said: {why}</div></div>""", unsafe_allow_html=True)
             else:
-                print(f"[live followers] {type(e).__name__}: {e}", flush=True)  # shows in Manage app > logs
                 st.warning(f"Live follower count isn't working. Instagram said: {e}  \n"
                            f"{describe_token(token)} If this doesn't match the IG_ACCESS_TOKEN saved on GitHub, "
                            "paste the GitHub one into this app's Secrets.")
             return
-        key = "live_prev_hero" if hero else "live_prev"
         tick = st.session_state.get(key + "_tick", 0) + 1
         st.session_state[key + "_tick"] = tick
         phase = "a" if tick % 2 else "b"

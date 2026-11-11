@@ -315,6 +315,9 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 .live-banner {{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding: 8px 14px; margin-bottom: 18px;
   border: 1px solid rgba(124,196,127,.35); background: rgba(124,196,127,.08); color:{MIST}; font-size:.9rem; }}
 .live-hero .live-banner {{ margin: 14px 0 0; }}
+.live-banner.paused {{ border-color: rgba(230,212,156,.35); background: rgba(230,212,156,.07); }}
+.live-banner.paused .dot {{ background: {LAMP}; animation: none; }}
+.live-why {{ color:{STONE}; font-size:.78rem; margin-top: 6px; max-width: 420px; margin-left: auto; overflow-wrap: anywhere; }}
 .live-banner b {{ font-weight: 700; }}
 .live-banner span:not(.dot) {{ color:{STONE}; }}
 .live-banner .dot {{ width:8px; height:8px; border-radius:50%; background:#7CC47F; animation: livepulse 2s infinite; }}
