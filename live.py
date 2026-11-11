@@ -10,7 +10,7 @@ import streamlit as st
 
 from ig_client import InstagramClient, InstagramError
 from shared import cfg
-from sync import clean_token
+from sync import clean_token, describe_token
 
 REFRESH_SECONDS = 30
 
@@ -78,10 +78,14 @@ def live_followers(synced_followers: int | None, hero: bool = False):
             n = _live_count(token)
         except Exception as e:  # never let the ticker break the page
             if hero and synced_followers is not None:
+                print(f"[live followers] {type(e).__name__}: {e}", flush=True)
                 st.markdown(f'<div class="live-hero"><div class="live-n">{synced_followers:,}</div>'
                             f'<div class="l">followers on Instagram</div></div>', unsafe_allow_html=True)
             else:
-                st.caption(f"Live follower count is unavailable right now: {e}")
+                print(f"[live followers] {type(e).__name__}: {e}", flush=True)  # shows in Manage app > logs
+                st.warning(f"Live follower count isn't working. Instagram said: {e}  \n"
+                           f"{describe_token(token)} If this doesn't match the IG_ACCESS_TOKEN saved on GitHub, "
+                           "paste the GitHub one into this app's Secrets.")
             return
         key = "live_prev_hero" if hero else "live_prev"
         tick = st.session_state.get(key + "_tick", 0) + 1
