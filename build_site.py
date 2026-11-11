@@ -88,12 +88,20 @@ def build():
     for r in conn.execute("SELECT breakdown, label, value FROM demographics"):
         all_demo.setdefault(r["breakdown"], {})[r["label"]] = r["value"]
     # Viewers (accounts reached this month) and followers, each with last month's breakdown.
+    # Viewers "all time": Instagram only reports a month at a time, so add up every saved month.
+    viewers_all, months_seen = {}, set()
+    for r in conn.execute("SELECT month, breakdown, label, value FROM demographics_monthly WHERE audience='viewers'"):
+        months_seen.add(r["month"])
+        viewers_all.setdefault(r["breakdown"], {})
+        viewers_all[r["breakdown"]][r["label"]] = viewers_all[r["breakdown"]].get(r["label"], 0) + r["value"]
+    viewers_since = (datetime.strptime(min(months_seen) + "-01", "%Y-%m-%d").strftime("%B %Y")
+                     if months_seen else None)
     audiences = {
-        "viewers": {k.split(":", 1)[1]: v for k, v in all_demo.items() if k.startswith("viewers:")},
         "followers": {k: v for k, v in all_demo.items() if ":" not in k},
+        "viewers": viewers_all,
     }
     audiences = {k: v for k, v in audiences.items() if v}
-    demo_source = "viewers" if "viewers" in audiences else "followers"
+    demo_source = "followers" if "followers" in audiences else "viewers"
     demo = audiences.get(demo_source, {})
     today_d = datetime.now(TZ).date()
     prev_month = (today_d.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
@@ -108,7 +116,8 @@ def build():
                     "bio": setting("profile_biography"), "pic": setting("profile_profile_picture_url")},
         "followers": followers, "daily": daily, "demographics": demo, "demo_source": demo_source,
         "demo_prev": demo_prev, "demo_prev_month": prev_month_name,
-        "audiences": audiences, "audiences_prev": audiences_prev, "reels": reels,
+        "audiences": audiences, "audiences_prev": {"followers": audiences_prev.get("followers", {})},
+        "viewers_since": viewers_since, "reels": reels,
         "contact": os.getenv("CONTACT_EMAIL") or None, "tagline": os.getenv("CREATOR_TAGLINE") or None,
         "updated": datetime.now(timezone.utc).astimezone(TZ).strftime("%B %-d, %Y"),
     }

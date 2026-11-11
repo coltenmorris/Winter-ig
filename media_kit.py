@@ -134,11 +134,16 @@ _has_followers = not demo.empty and (~demo["breakdown"].str.contains(":")).any()
 
 class CountryNames(dict):
     """Two-letter country code -> full name (falls back to the code)."""
+    def __bool__(self):  # an empty dict is falsy, which would skip the lookup
+        return True
+
     def get(self, code, default=None):
         try:
             import pycountry
             c = pycountry.countries.get(alpha_2=code)
-            return getattr(c, "common_name", None) or c.name if c else (default or code)
+            if not c:
+                return default or code
+            return getattr(c, "common_name", None) or c.name
         except Exception:
             return default or code
 
@@ -152,28 +157,35 @@ def full_totals(d: pd.DataFrame) -> dict:
 
 
 prev_month = (pd.Timestamp.today().to_period("M") - 1).strftime("%Y-%m")
+# Viewers "all time": Instagram only gives this week or this month, so add up every month the sync has saved.
+_conn = db.connect()
+_monthly = pd.read_sql("SELECT month, audience, breakdown, label, value FROM demographics_monthly", _conn)
+_conn.close()
+_vm = _monthly[_monthly["audience"] == "viewers"]
+viewers_all = _vm.groupby(["breakdown", "label"], as_index=False)["value"].sum()
+viewers_since = pd.Period(_vm["month"].min()).strftime("%B %Y") if not _vm.empty else None
+_has_viewers = not viewers_all.empty
 if _has_viewers or _has_followers:
     st.markdown("## Who's watching")
-    options = (["Viewers this month"] if _has_viewers else []) + (["Followers"] if _has_followers else [])
+    options = (["Followers"] if _has_followers else []) + (["Viewers, all time"] if _has_viewers else [])
     pick = st.segmented_control("Audience", options, default=options[0], key="aud",
                                 label_visibility="collapsed") or options[0]
-    audience = "viewers" if pick.startswith("Viewers") else "followers"
+    audience = "followers" if pick == "Followers" else "viewers"
     if audience == "viewers":
-        v = _all_demo[_all_demo["breakdown"].str.startswith("viewers:")]
-        demo = v.assign(breakdown=v["breakdown"].str.split(":").str[1])
-        demo_lede = "Accounts that viewed your posts and reels this month, as reported by Instagram."
+        demo = viewers_all
+        demo_lede = (f"Everyone who viewed your posts and reels since {viewers_since}, added up month by month "
+                     "(Instagram only reports viewers one month at a time).")
+        prev_share = {}
     else:
         demo = _all_demo[~_all_demo["breakdown"].str.contains(":")]
         demo_lede = "Your followers, as reported by Instagram."
+        _prev = _monthly[(_monthly["month"] == prev_month) & (_monthly["audience"] == "followers")]
+        _ptot = full_totals(_prev) if not _prev.empty else {}
+        prev_share = {b: (g.set_index("label")["value"] / _ptot[b]).to_dict() for b, g in _prev.groupby("breakdown")}
     demo_lede += " City and country shares are out of the whole audience; Instagram lists the top 45 of each."
-    _conn = db.connect()
-    _prev = pd.read_sql("SELECT breakdown, label, value FROM demographics_monthly WHERE month=? AND audience=?",
-                        _conn, params=(prev_month, audience))
-    _conn.close()
-    _ptot = full_totals(_prev) if not _prev.empty else {}
-    prev_share = {b: (g.set_index("label")["value"] / _ptot[b]).to_dict() for b, g in _prev.groupby("breakdown")}
-    demo_lede += (f" Changes compare with {pd.Period(prev_month).strftime('%B')}." if prev_share else
-                  " Month-over-month changes appear once last month's numbers are saved.")
+    if audience == "followers":
+        demo_lede += (f" Changes compare with {pd.Period(prev_month).strftime('%B')}." if prev_share else
+                      " Month-over-month changes appear once last month's numbers are saved.")
 else:
     demo = demo.iloc[0:0]
     prev_share = {}

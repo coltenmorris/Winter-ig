@@ -77,7 +77,7 @@ let html = `
 // Audience: viewers this month or followers, with a switch
 const AUD = D.audiences || (Object.keys(D.demographics || {}).length ? { [D.demo_source]: D.demographics } : {});
 const AUD_PREV = D.audiences_prev || {};
-const audNames = Object.keys(AUD).sort((a, b) => (a === "viewers" ? -1 : 1));
+const audNames = Object.keys(AUD).sort((a, b) => (a === "followers" ? -1 : 1));
 let DN = null; try { DN = new Intl.DisplayNames(["en"], { type: "region" }); } catch (e) {}
 const COUNTRY = new Proxy({}, { get: (_, k) => { try { return DN ? DN.of(k) : k; } catch (e) { return k; } } });
 const sum = o => Object.values(o || {}).reduce((s, x) => s + x, 0);
@@ -97,9 +97,9 @@ function renderAudience(name) {
     return `<div class="glass panel bars${pv ? " mom" : ""}">${rows.map(([k, v]) => `<div class="row"><span class="lbl">${esc((names[k] || k).split(",")[0])}</span>
       <span class="track"><span class="fill" style="display:block;width:${(v / peak * 100).toFixed(1)}%"></span></span><span class="pct">${v / tot < .005 ? "<1" : Math.round(v / tot * 100)}%</span>${change(v / tot, key, k)}</div>`).join("")}</div>`;
   };
-  let h = `<p class="lede">${name === "viewers" ? "Accounts that viewed your posts and reels this month, as reported by Instagram." : "Your followers, as reported by Instagram."}
+  let h = `<p class="lede">${name === "viewers" ? `Everyone who viewed your posts and reels since ${esc(D.viewers_since || "tracking began")}, added up month by month (Instagram only reports viewers one month at a time).` : "Your followers, as reported by Instagram."}
     City and country shares are out of the whole audience; Instagram lists the top 45 of each.
-    ${hasPrev ? `Changes compare with ${esc(D.demo_prev_month)}.` : "Month-over-month changes appear once last month's numbers are saved."}</p><div class="cols"><div>`;
+    ${name !== "followers" ? "" : hasPrev ? `Changes compare with ${esc(D.demo_prev_month)}.` : "Month-over-month changes appear once last month's numbers are saved."}</p><div class="cols"><div>`;
   if (demo.age) h += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false, key: "age" });
   if (demo.gender) {
     const g = demo.gender, t = sum(g), m = (g.M || 0) / t, f = (g.F || 0) / t;
@@ -115,7 +115,7 @@ function renderAudience(name) {
 }
 if (audNames.length) {
   html += `<h2>Who's watching</h2>` + (audNames.length > 1 ? `<div class="seg" role="group" aria-label="Audience" id="audseg">${audNames.map(a =>
-    `<button data-a="${a}" aria-pressed="false">${a === "viewers" ? "Viewers this month" : "Followers"}</button>`).join("")}</div>` : "") + `<div id="audbody"></div>`;
+    `<button data-a="${a}" aria-pressed="false">${a === "viewers" ? "Viewers, all time" : "Followers"}</button>`).join("")}</div>` : "") + `<div id="audbody"></div>`;
 }
 
 // Top reels
