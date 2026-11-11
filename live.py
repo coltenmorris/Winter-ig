@@ -28,6 +28,26 @@ def _count(token: str) -> int:
     return int(c._get(c.uid, {"fields": "followers_count"})["followers_count"])
 
 
+def odometer_html(prev: int, n: int) -> str:
+    """Follower count where each changed digit rolls vertically: up when the count rises, down when it falls."""
+    new, old = f"{n:,}", f"{prev:,}"
+    width = max(len(new), len(old))
+    new, old = new.rjust(width), old.rjust(width)
+    direction = "up" if n > prev else "down"
+    out = []
+    for o, c in zip(old, new):
+        if c == " ":
+            continue  # digit that disappeared (e.g. 1,000 -> 999)
+        if o == c or not c.isdigit():
+            out.append(f'<span class="d">{c}</span>')
+        else:
+            # stack old and new; the roll animation slides from one to the other
+            stack = f"<span>{o.strip() or '&nbsp;'}</span><span>{c}</span>" if direction == "up" \
+                else f"<span>{c}</span><span>{o.strip() or '&nbsp;'}</span>"
+            out.append(f'<span class="d roll {direction}"><span class="reel">{stack}</span></span>')
+    return "".join(out)
+
+
 def live_followers(synced_followers: int | None):
     token = clean_token(cfg("IG_ACCESS_TOKEN"))
     if not token:
@@ -42,6 +62,8 @@ def live_followers(synced_followers: int | None):
             st.caption(f"Live follower count is unavailable right now: {e}")
             return
         start = st.session_state.setdefault("live_start", n)
+        prev = st.session_state.get("live_prev", n)
+        st.session_state["live_prev"] = n
         now = datetime.now(ZoneInfo("America/New_York")).strftime("%-I:%M:%S %p")
         bits = []
         if n != start:
@@ -52,7 +74,7 @@ def live_followers(synced_followers: int | None):
             bits.append(f"{d:+,} since the last daily sync")
         st.markdown(f"""<div class="live glass">
           <div class="live-top"><span class="dot" aria-hidden="true"></span>Live followers</div>
-          <div class="live-n" aria-live="polite">{n:,}</div>
+          <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n)}</div>
           <div class="live-sub">{" &nbsp;·&nbsp; ".join(bits) if bits else "No change since you opened this page"}<br>
           Updated {now}, refreshes every {REFRESH_SECONDS} seconds</div></div>""", unsafe_allow_html=True)
 

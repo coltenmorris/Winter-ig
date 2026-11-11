@@ -253,6 +253,21 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 @media (prefers-reduced-motion: reduce) {{ .live .dot {{ animation: none; }} }}
 .live-n {{ font-size: clamp(3rem, 9vw, 5.6rem); font-weight: 800; letter-spacing: -.055em; line-height: .95; color:{FERNB};
            font-variant-numeric: tabular-nums; margin-top: 6px; }}
+/* Odometer: changed digits roll vertically */
+.live-n {{ display:flex; align-items:flex-start; }}
+.live-n .d, .live-n .d span {{ color:{FERNB} !important; }}
+.live-n .d {{ display:inline-block; height:1em; line-height:1em; overflow:hidden; clip-path: inset(0); contain: paint; vertical-align: top; }}
+.live-n .roll .reel {{ display:flex; flex-direction:column; will-change: transform; }}
+.live-n .roll .reel > span {{ display:block; height:1em; line-height:1em; }}
+.live-n .roll.up .reel {{ animation: roll-up .9s cubic-bezier(.2,.8,.2,1) both, flash 1.8s ease-out both; }}
+.live-n .roll.down .reel {{ animation: roll-down .9s cubic-bezier(.2,.8,.2,1) both; }}
+@keyframes roll-up {{ from {{ transform: translateY(0); }} to {{ transform: translateY(-1em); }} }}
+@keyframes roll-down {{ from {{ transform: translateY(-1em); }} to {{ transform: translateY(0); }} }}
+@keyframes flash {{ from {{ filter: brightness(1.45); }} to {{ filter: brightness(1); }} }}
+@media (prefers-reduced-motion: reduce) {{
+  .live-n .roll.up .reel {{ animation: none !important; transform: translateY(-1em); }}
+  .live-n .roll.down .reel {{ animation: none !important; transform: translateY(0); }}
+}}
 .live-sub {{ color:{STONE}; font-size:.85rem; margin-top: 8px; line-height:1.5; }}
 
 /* Period summary */
