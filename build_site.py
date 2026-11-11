@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 import db
 import flags as flags_mod
+from profile_facts import facts as profile_facts
 
 ROOT = Path(__file__).parent
 SRC, OUT = ROOT / "site", ROOT / "docs"
@@ -119,6 +120,8 @@ def build():
         "audiences": audiences, "audiences_prev": {"followers": audiences_prev.get("followers", {})},
         "viewers_since": viewers_since,
         "views_30d": float(setting("views_30d")) if setting("views_30d") not in (None, "", "None") else None, "reels": reels,
+        "facts": profile_facts(os.getenv("ACCOUNT_LOCATION"), os.getenv("ACCOUNT_CREATED"), setting("profile_biography"),
+                               min((datetime.fromisoformat(r["posted"]) for r in reels), default=None)),
         "contact": os.getenv("CONTACT_EMAIL") or None, "tagline": os.getenv("CREATOR_TAGLINE") or None,
         "updated": datetime.now(timezone.utc).astimezone(TZ).strftime("%B %-d, %Y"),
     }

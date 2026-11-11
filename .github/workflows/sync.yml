@@ -38,6 +38,8 @@ jobs:
         env:
           CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
           CREATOR_TAGLINE: ${{ vars.CREATOR_TAGLINE }}
+          ACCOUNT_LOCATION: ${{ vars.ACCOUNT_LOCATION }}
+          ACCOUNT_CREATED: ${{ vars.ACCOUNT_CREATED }}
         run: python build_site.py
 
       - name: Save database and website to repo

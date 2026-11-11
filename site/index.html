@@ -63,6 +63,7 @@ let html = `
     <div class="row"><span class="handle">@${esc(P.username)}</span>${avatar}</div>
     ${(D.tagline || P.bio) ? `<div class="bio">${esc(D.tagline || P.bio)}</div>` : ""}
     ${contact}
+    ${(D.facts || []).length ? `<dl class="facts">${D.facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
   </div>
 </section>
 <div class="script">media kit</div>

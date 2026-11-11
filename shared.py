@@ -165,6 +165,11 @@ a {{ color: {FERNB}; }}
     text-decoration: none !important; font-weight: 600; }}
 .contact:hover {{ background: {LAMP}; }}
 
+/* Account facts under the contact button */
+.facts {{ display:flex; flex-wrap:wrap; gap: 10px 28px; margin: 18px 0 0; padding-top: 14px; border-top: 1px solid {RULE_C}; }}
+.facts dt {{ color:{STONE}; font-size:.78rem; font-weight:500; }}
+.facts dd {{ margin: 2px 0 0; font-size:.95rem; }}
+
 /* Stats board */
 .board {{ display:grid; grid-template-columns: repeat(4, 1fr); margin-top: 44px; background: none !important;
     border: 0 !important; border-top: 1px solid {RULE_C} !important; border-bottom: 1px solid {RULE_C} !important; }}

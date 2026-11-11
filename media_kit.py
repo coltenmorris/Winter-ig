@@ -78,6 +78,12 @@ avatar = (f'<img class="avatar" src="{esc(pic)}" alt="" referrerpolicy="no-refer
           else f'<div class="avatar">{esc((name or handle)[:1].upper())}</div>')
 contact = (f'<a class="contact" href="mailto:{esc(email)}?subject=Partnership%20with%20%40{esc(handle)}">'
            f'Contact for partnerships</a>' if email else "")
+from profile_facts import facts as _facts  # noqa: E402
+_first = media["posted_at"].min() if not media.empty else None
+profile_facts = _facts(cfg("ACCOUNT_LOCATION"), cfg("ACCOUNT_CREATED"), profile.get("biography"),
+                       _first.to_pydatetime() if _first is not None and _first == _first else None)
+facts_html = ('<dl class="facts">' + "".join(f"<div><dt>{esc(k)}</dt><dd>{esc(v)}</dd></div>" for k, v in profile_facts)
+              + "</dl>") if profile_facts else ""
 st.markdown(f"""
 <div class="hero">
   <div class="count glass">
@@ -92,6 +98,7 @@ st.markdown(f"""
     <div class="row"><span class="handle">@{esc(handle)}</span>{avatar}</div>
     {f'<div class="bio">{esc(bio)}</div>' if bio else ''}
     {contact}
+    {facts_html}
   </div>
 </div>
 <div class="board glass{' five' if v30_label.startswith('Views in') else ''}">
