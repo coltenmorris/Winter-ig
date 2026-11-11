@@ -345,3 +345,8 @@ if show_fol or show_wk:
 updated = snaps["captured_date"].max()
 st.markdown(f'<div class="foot">Numbers come directly from the Instagram API and update daily. '
             f'Last updated {updated:%B %-d, %Y}.</div>', unsafe_allow_html=True)
+
+# ---------------- live follower count (off by default, switch at the very bottom) ----------------
+if st.toggle("Show live follower count", value=False, key="live_kit"):
+    from live import live_followers
+    live_followers(int(acct["followers"].iloc[-1]) if not acct.empty else None)

@@ -246,6 +246,7 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 .summary b {{ font-size:1.6rem; font-weight:700; letter-spacing:-.04em; color:{MIST}; margin-right:6px; }}
 
 /* Live follower ticker */
+[data-testid="stToggle"] label p, [data-testid="stCheckbox"] label p {{ color:{STONE}; font-size:.85rem; }}
 .live {{ padding: 18px 22px; margin: 6px 0 18px; }}
 .live-top {{ color:{STONE}; font-size:.85rem; font-weight:500; display:flex; align-items:center; gap:8px; }}
 .live .dot {{ width:8px; height:8px; border-radius:50%; background:#7CC47F; box-shadow: 0 0 0 0 rgba(124,196,127,.6); animation: livepulse 2s infinite; }}
