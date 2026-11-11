@@ -28,7 +28,7 @@ def _count(token: str) -> int:
     return int(c._get(c.uid, {"fields": "followers_count"})["followers_count"])
 
 
-def odometer_html(prev: int, n: int) -> str:
+def odometer_html(prev: int, n: int, phase: str = "a") -> str:
     """Follower count where each changed digit moves vertically: the new digit slides in and the old one
     slides out and fades (upward when the count rises, downward when it falls). Nothing is clipped, so the
     digits render whole in any font."""
@@ -46,7 +46,9 @@ def odometer_html(prev: int, n: int) -> str:
             out.append(f'<span class="d">{c}</span>')
         else:
             gone = f'<span class="old" aria-hidden="true">{o}</span>' if o.strip() else ""
-            out.append(f'<span class="d roll {direction}">{gone}<span class="new">{c}</span></span>')
+            # phase alternates a/b on every refresh so the browser restarts the animation even when the
+            # same digit changes on back-to-back refreshes (it reuses the element otherwise)
+            out.append(f'<span class="d roll {direction} {phase}">{gone}<span class="new">{c}</span></span>')
     return "".join(out)
 
 
@@ -69,12 +71,15 @@ def live_followers(synced_followers: int | None, hero: bool = False):
                 st.caption(f"Live follower count is unavailable right now: {e}")
             return
         key = "live_prev_hero" if hero else "live_prev"
+        tick = st.session_state.get(key + "_tick", 0) + 1
+        st.session_state[key + "_tick"] = tick
+        phase = "a" if tick % 2 else "b"
         start = st.session_state.setdefault("live_start", n)
         prev = st.session_state.get(key, n)
         st.session_state[key] = n
         if hero:
             st.markdown(f"""<div class="live-hero">
-              <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n)}</div>
+              <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n, phase)}</div>
               <div class="l"><span class="dot" aria-hidden="true"></span>live followers on Instagram</div></div>""",
                         unsafe_allow_html=True)
             return
@@ -88,7 +93,7 @@ def live_followers(synced_followers: int | None, hero: bool = False):
             bits.append(f"{d:+,} since the last daily sync")
         st.markdown(f"""<div class="live glass">
           <div class="live-top"><span class="dot" aria-hidden="true"></span>Live followers</div>
-          <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n)}</div>
+          <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n, phase)}</div>
           <div class="live-sub">{" &nbsp;·&nbsp; ".join(bits) if bits else "No change since you opened this page"}<br>
           Updated {now}, refreshes every {REFRESH_SECONDS} seconds</div></div>""", unsafe_allow_html=True)
 

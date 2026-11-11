@@ -261,15 +261,24 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 .live-n .d.sep {{ font-feature-settings: "tnum" 0, "pnum" 1; font-variant-numeric: proportional-nums; }}
 .live-n .roll .new {{ display:inline-block; }}
 .live-n .roll .old {{ position:absolute; left:0; top:0; pointer-events:none; }}
-.live-n .roll.up .new {{ animation: in-up .75s cubic-bezier(.2,.8,.2,1) both, flash 1.8s ease-out both; }}
-.live-n .roll.up .old {{ animation: out-up .75s cubic-bezier(.2,.8,.2,1) both; }}
-.live-n .roll.down .new {{ animation: in-down .75s cubic-bezier(.2,.8,.2,1) both; }}
-.live-n .roll.down .old {{ animation: out-down .75s cubic-bezier(.2,.8,.2,1) both; }}
-@keyframes in-up {{ from {{ transform: translateY(.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
-@keyframes out-up {{ from {{ transform: none; opacity: 1; }} to {{ transform: translateY(-.55em); opacity: 0; }} }}
-@keyframes in-down {{ from {{ transform: translateY(-.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
-@keyframes out-down {{ from {{ transform: none; opacity: 1; }} to {{ transform: translateY(.55em); opacity: 0; }} }}
-@keyframes flash {{ from {{ filter: brightness(1.45); }} to {{ filter: brightness(1); }} }}
+.live-n .roll.up.a .new {{ animation: in-up-a .75s cubic-bezier(.2,.8,.2,1) both, flash-a 1.8s ease-out both; }}
+.live-n .roll.up.b .new {{ animation: in-up-b .75s cubic-bezier(.2,.8,.2,1) both, flash-b 1.8s ease-out both; }}
+.live-n .roll.up.a .old {{ animation: out-up-a .75s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.up.b .old {{ animation: out-up-b .75s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down.a .new {{ animation: in-down-a .75s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down.b .new {{ animation: in-down-b .75s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down.a .old {{ animation: out-down-a .75s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down.b .old {{ animation: out-down-b .75s cubic-bezier(.2,.8,.2,1) both; }}
+@keyframes in-up-a {{ from {{ transform: translateY(.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
+@keyframes in-up-b {{ from {{ transform: translateY(.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
+@keyframes out-up-a {{ from {{ transform: none; opacity: 1; }} to {{ transform: translateY(-.55em); opacity: 0; }} }}
+@keyframes out-up-b {{ from {{ transform: none; opacity: 1; }} to {{ transform: translateY(-.55em); opacity: 0; }} }}
+@keyframes in-down-a {{ from {{ transform: translateY(-.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
+@keyframes in-down-b {{ from {{ transform: translateY(-.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
+@keyframes out-down-a {{ from {{ transform: none; opacity: 1; }} to {{ transform: translateY(.55em); opacity: 0; }} }}
+@keyframes out-down-b {{ from {{ transform: none; opacity: 1; }} to {{ transform: translateY(.55em); opacity: 0; }} }}
+@keyframes flash-a {{ from {{ filter: brightness(1.45); }} to {{ filter: brightness(1); }} }}
+@keyframes flash-b {{ from {{ filter: brightness(1.45); }} to {{ filter: brightness(1); }} }}
 @media (prefers-reduced-motion: reduce) {{
   .live-n .roll .new {{ animation: none !important; }}
   .live-n .roll .old {{ display: none; }}
