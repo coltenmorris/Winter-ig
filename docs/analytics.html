@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Creator Analytics</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="style.css?v=202611110813">
-<link rel="stylesheet" href="thermal.css?v=202611110813">
+<link rel="stylesheet" href="style.css?v=202611111653">
+<link rel="stylesheet" href="thermal.css?v=202611111653">
 <script>try{if(localStorage.getItem("bg")==="static")document.documentElement.classList.add("bg-static")}catch(e){}</script>
 </head>
 <body>
@@ -25,6 +25,11 @@
   </div>
   <div class="glass panel" id="pchart"></div>
   <div class="glass" id="ptable"></div>
+
+  <h2>Stories</h2>
+  <p class="lede" id="stlede"></p>
+  <section class="kpis glass" id="stkpis"></section>
+  <div id="stdays"></div>
 
   <h2>Posting calendar</h2>
   <p class="lede">Each day shows how many times you posted. Tap a day to list what you posted, or pick a date range below.</p>
@@ -62,7 +67,7 @@
   <div class="glass" id="list"></div>
   <div class="foot">Data from the Instagram API, refreshed by the daily sync.</div>
 </div>
-<script src="data.js?v=202611110813"></script>
+<script src="data.js?v=202611111653"></script>
 <script>
 if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -76,7 +81,7 @@ if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   window.__EMPTY = true;
 }
 </script>
-<script src="common.js?v=202611110813"></script>
+<script src="common.js?v=202611111653"></script>
 <script>
 if (!window.__EMPTY) {
 mark("an");
@@ -97,6 +102,51 @@ $("kpis").innerHTML = `<div><div class="v">${fmt(fol)}</div><div class="k">Follo
   <div><div class="v">${fmt(avg(mains))}</div><div class="k">Avg ${MAIN_LABEL} per reel, ${HP.label}</div></div>
   <div><div class="v">${engs.length ? pct(avg(engs)) : fmt(avg(R.map(r => r.total.comments).filter(v => v != null)))}</div><div class="k">${engs.length ? "Avg engagement" : "Avg comments"}, ${HP.label}</div></div>
   <div><div class="v">${watch.length ? avg(watch).toFixed(1) + "s" : R.length}</div><div class="k">${watch.length ? "Avg watch time, " + HP.label : "Reels tracked"}</div></div>`;
+
+// ---------- stories ----------
+(function stories() {
+  const S = (D.stories || []).slice().sort((a, b) => a.ts - b.ts);
+  if (!S.length) {
+    $("stlede").textContent = "No stories saved yet. Each story's stats are saved every hour while it's live. Instagram deletes story stats 24 hours after posting, so stories from before this started can't be added.";
+    $("stkpis").remove(); return;
+  }
+  const sv = s => s.views ?? s.reach;
+  const recent = S.filter(s => ageDays(s) <= 30), pool = recent.length ? recent : S, lbl = recent.length ? "last 30 days" : "all time";
+  const nums = k => pool.map(s => s[k]).filter(v => v != null);
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  const viewsArr = pool.map(sv).filter(v => v != null);
+  const exitPairs = pool.filter(s => s.exits != null && sv(s));
+  const exitRate = exitPairs.length ? sum(exitPairs.map(s => s.exits)) / sum(exitPairs.map(sv)) : null;
+  const follows = sum(nums("follows")), replies = nums("replies");
+  $("stlede").textContent = `${pool.length} ${pool.length === 1 ? "story" : "stories"} posted, ${lbl}.` +
+    (follows ? ` ${fmt(follows)} new follow${follows === 1 ? "" : "s"} came from stories.` : "") +
+    " Numbers are saved every hour, so each story keeps its last count before Instagram expires it after 24 hours.";
+  $("stkpis").innerHTML = `<div><div class="v">${fmt(avg(viewsArr))}</div><div class="k">Avg views per story</div></div>
+    <div><div class="v">${fmt(avg(nums("reach")))}</div><div class="k">Avg accounts reached</div></div>
+    <div><div class="v">${exitRate != null ? pct(exitRate) : "n/a"}</div><div class="k">Exit rate (left your stories)</div></div>
+    <div><div class="v">${replies.length ? fmt(sum(replies)) : "n/a"}</div><div class="k">Replies</div></div>`;
+  // Group by day, newest day first; inside a day, in posting order so drop-off reads left to right
+  const days = {};
+  S.forEach(s => (days[s.date] ||= []).push(s));
+  const keys = Object.keys(days).sort().reverse();
+  const card = s => `<div class="scard">
+      <div class="thumb sthumb">${s.thumb ? `<img src="${esc(s.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</div>
+      <div class="st-t">${fmtTime(s.posted)}</div>
+      <div class="st-v">${fmt(sv(s))} <span>${s.views != null ? "views" : "reached"}</span></div>
+      <dl><dt>Reach</dt><dd>${fmt(s.reach)}</dd><dt>Replies</dt><dd>${fmt(s.replies)}</dd>
+      <dt>Forward taps</dt><dd>${fmt(s.taps_forward)}</dd><dt>Exits</dt><dd>${fmt(s.exits)}</dd></dl></div>`;
+  const day = k => {
+    const L = days[k], first = sv(L[0]), last = sv(L[L.length - 1]);
+    const hold = L.length > 1 && first ? ` ${pct(last / first)} of first-story viewers stayed to the last.` : "";
+    return `<div class="sday"><div class="sday-h"><b>${fmtDate(k + "T12:00", { weekday: "short", month: "short", day: "numeric" })}</b>
+      <span>${L.length} ${L.length === 1 ? "story" : "stories"}.${hold}</span></div><div class="sgrid">${L.map(card).join("")}</div></div>`;
+  };
+  const SHOW = 7;
+  $("stdays").innerHTML = keys.slice(0, SHOW).map(day).join("") +
+    (keys.length > SHOW ? `<button class="more" id="stmore">Show ${keys.length - SHOW} earlier day${keys.length - SHOW === 1 ? "" : "s"}</button>` : "");
+  const more = $("stmore");
+  if (more) more.onclick = () => { more.insertAdjacentHTML("beforebegin", keys.slice(SHOW).map(day).join("")); more.remove(); };
+})();
 
 // ---------- period summary ----------
 const p2 = n => String(n).padStart(2, "0");

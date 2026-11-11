@@ -350,6 +350,19 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
   table.ms th, table.ms td {{ padding: 8px 3px; font-size:.82rem; }}
   table.ms td {{ font-size: .98rem; }}
 }}
+/* stories */
+.sday {{ margin-top: 26px; }}
+.sday-h {{ display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding-bottom: 10px; border-bottom: 1px solid {RULE_C}; }}
+.sday-h span {{ color: {STONE}; font-size: .92rem; }}
+.sgrid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 18px 14px; margin-top: 14px; }}
+.sthumb {{ aspect-ratio: 9 / 16; position: relative; overflow: hidden; background: linear-gradient(180deg, #1C2620, #0F1612); }}
+.sthumb img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
+.scard .st-t {{ color: {STONE}; font-size: .82rem; margin-top: 8px; }}
+.scard .st-v {{ font-weight: 700; font-size: 1.15rem; letter-spacing: -.02em; }}
+.scard .st-v span {{ font-weight: 400; font-size: .8rem; color: {STONE}; letter-spacing: 0; }}
+.scard dl {{ display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin: 6px 0 0; font-size: .82rem; }}
+.scard dt {{ color: {STONE}; }} .scard dd {{ margin: 0; text-align: right; font-variant-numeric: tabular-nums; }}
+.board.four {{ grid-template-columns: repeat(4, 1fr); }}
 </style>""", unsafe_allow_html=True)
     thermal_background()
 

@@ -1,0 +1,53 @@
+name: Hourly story sync
+
+# Instagram only keeps story stats for 24 hours after a story is posted, so this checks every hour
+# for live stories and saves their latest numbers. When no story is up, nothing is committed.
+on:
+  schedule:
+    - cron: "34 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ig-sync
+  cancel-in-progress: false
+
+jobs:
+  stories:
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/Los_Angeles
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests pandas python-dotenv
+
+      - name: Save live story stats
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        run: python sync.py --stories-only
+
+      - name: Rebuild website if anything changed
+        env:
+          CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+          CREATOR_TAGLINE: ${{ vars.CREATOR_TAGLINE }}
+          ACCOUNT_CREATED: ${{ vars.ACCOUNT_CREATED }}
+        run: |
+          if git diff --quiet ig_analytics.db; then
+            echo "No live stories, nothing to save."
+          else
+            python build_site.py
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -f ig_analytics.db docs
+            git commit -m "Story stats $(date +"%b %-d, %-I %p") PT"
+            git pull --rebase -q || true
+            git push
+          fi

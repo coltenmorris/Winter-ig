@@ -80,6 +80,14 @@ def build():
             "series": [[age, s["views"] if s["views"] is not None else s["likes"]] for age, s in aged],
         })
 
+    stories = []
+    for s in conn.execute("""SELECT s.*, st.* FROM stories s LEFT JOIN story_stats st ON st.story_id = s.id
+                             ORDER BY s.posted_at DESC"""):
+        posted = datetime.fromisoformat(s["posted_at"].replace("+0000", "+00:00")).astimezone(TZ)
+        stories.append({"id": s["id"], "posted": posted.strftime("%Y-%m-%dT%H:%M"), "ts": int(posted.timestamp() * 1000),
+                        "date": posted.strftime("%Y-%m-%d"), "type": s["media_type"], "thumb": s["thumbnail_url"],
+                        "link": s["permalink"], **{c: s[c] for c in db.STORY_COLS}})
+
     followers = [{"date": r["captured_date"], "n": r["followers"]}
                  for r in conn.execute("SELECT captured_date, followers FROM account_snapshots ORDER BY captured_date")]
     daily = [{"date": r["captured_date"], "views": r["views"], "reach": r["reach"]}
@@ -118,7 +126,7 @@ def build():
         "demo_prev": demo_prev, "demo_prev_month": prev_month_name,
         "audiences": audiences, "audiences_prev": {"followers": audiences_prev.get("followers", {})},
         "viewers_since": viewers_since,
-        "views_30d": float(setting("views_30d")) if setting("views_30d") not in (None, "", "None") else None, "reels": reels,
+        "stories": stories, "views_30d": float(setting("views_30d")) if setting("views_30d") not in (None, "", "None") else None, "reels": reels,
         "created": os.getenv("ACCOUNT_CREATED") or "June 15th, 2026",
         "contact": os.getenv("CONTACT_EMAIL") or None, "tagline": os.getenv("CREATOR_TAGLINE") or None,
         "updated": datetime.now(timezone.utc).astimezone(TZ).strftime("%B %-d, %Y"),

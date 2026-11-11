@@ -39,6 +39,15 @@ CREATE TABLE IF NOT EXISTS demographics_monthly (
     month TEXT, audience TEXT, breakdown TEXT, label TEXT, value INTEGER,
     PRIMARY KEY (month, audience, breakdown, label)
 );
+CREATE TABLE IF NOT EXISTS stories (
+    id TEXT PRIMARY KEY, media_type TEXT, posted_at TEXT, permalink TEXT, thumbnail_url TEXT, caption TEXT
+);
+CREATE TABLE IF NOT EXISTS story_stats (
+    story_id TEXT PRIMARY KEY, captured_at TEXT,
+    views INTEGER, reach INTEGER, replies INTEGER, shares INTEGER, total_interactions INTEGER,
+    follows INTEGER, profile_visits INTEGER, navigation INTEGER,
+    taps_forward INTEGER, taps_back INTEGER, exits INTEGER, swipe_forward INTEGER
+);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 """
 
@@ -137,3 +146,24 @@ def save_monthly_demographics(conn, month: str, audience: str, demo: dict):
                      (month, audience, breakdown))
         conn.executemany("INSERT INTO demographics_monthly VALUES (?,?,?,?,?)",
                          [(month, audience, breakdown, k, int(v)) for k, v in rows.items()])
+
+
+STORY_COLS = ["views", "reach", "replies", "shares", "total_interactions", "follows", "profile_visits",
+              "navigation", "taps_forward", "taps_back", "exits", "swipe_forward"]
+
+
+def upsert_story(conn, s: dict, captured_at: str, ins: dict):
+    """Stories keep one row of stats: the latest capture before they expire. A failed capture never wipes a good one."""
+    thumb = s.get("thumbnail_url") or (s.get("media_url") if s.get("media_type") == "IMAGE" else None)
+    conn.execute("""INSERT INTO stories(id, media_type, posted_at, permalink, thumbnail_url, caption) VALUES (?,?,?,?,?,?)
+                    ON CONFLICT(id) DO UPDATE SET thumbnail_url=COALESCE(excluded.thumbnail_url, stories.thumbnail_url),
+                    permalink=COALESCE(excluded.permalink, stories.permalink)""",
+                 (s["id"], s.get("media_type"), s.get("timestamp"), s.get("permalink"), thumb, s.get("caption")))
+    vals = [ins.get(c) for c in STORY_COLS]
+    if all(v is None for v in vals):
+        return
+    sets = ", ".join(f"{c}=COALESCE(excluded.{c}, story_stats.{c})" for c in STORY_COLS)
+    conn.execute(f"""INSERT INTO story_stats(story_id, captured_at, {", ".join(STORY_COLS)})
+                     VALUES (?, ?, {", ".join("?" * len(STORY_COLS))})
+                     ON CONFLICT(story_id) DO UPDATE SET captured_at=excluded.captured_at, {sets}""",
+                 [s["id"], captured_at, *vals])

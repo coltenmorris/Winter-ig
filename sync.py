@@ -137,9 +137,28 @@ def run_sync(log=print, include_photos: bool = True) -> int:
         if rep:
             log("  " + rep)
         log("  Fix: generate a new token with the instagram_manage_insights permission and update IG_ACCESS_TOKEN.")
+    sync_stories(conn, client, log)
     maybe_refresh(conn, client, log)
     log("Sync complete.")
     return len(videos)
+
+
+def sync_stories(conn=None, client: InstagramClient | None = None, log=print) -> int:
+    """Save stats for stories that are live right now. Instagram drops them 24 hours after posting,
+    so a separate hourly job runs this to catch each story's final numbers."""
+    conn = conn or db.connect()
+    client = client or InstagramClient(get_token(conn))
+    try:
+        stories = client.list_stories()
+    except InstagramError as e:
+        log(f"Could not list stories: {e}")
+        return 0
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+    for s in stories:
+        db.upsert_story(conn, s, now, client.story_insights(s["id"]))
+    conn.commit()
+    log(f"Saved stats for {len(stories)} live stor{'y' if len(stories) == 1 else 'ies'}.")
+    return len(stories)
 
 
 def seed_demo(days: int = 75, n_videos: int = 28):
@@ -209,13 +228,17 @@ def seed_demo(days: int = 75, n_videos: int = 28):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--demo", action="store_true", help="fill the database with fake data")
+    p.add_argument("--stories-only", action="store_true", help="only save stats for live stories")
     p.add_argument("--videos-only", action="store_true", help="skip photo and carousel posts")
     a = p.parse_args()
     if a.demo:
         seed_demo()
     else:
         try:
-            run_sync(include_photos=not a.videos_only)
+            if a.stories_only:
+                sync_stories()
+            else:
+                run_sync(include_photos=not a.videos_only)
         except InstagramError as e:
             msg = f"Instagram error: {e}"
             if "token" in str(e).lower() or "oauth" in str(e).lower():

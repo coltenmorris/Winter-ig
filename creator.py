@@ -108,6 +108,63 @@ for p, r in summ.iterrows():
         f'<span class="n">{fmt_num(r["followers"]) if pd.notna(r["followers"]) else dash}{fc}</span></div>')
 st.markdown('<div class="glass">' + "".join(rows) + "</div>", unsafe_allow_html=True)
 
+# ---------------- stories ----------------
+st.markdown("## Stories")
+_sc = db.connect()
+stories = pd.read_sql_query("""SELECT s.*, st.* FROM stories s LEFT JOIN story_stats st ON st.story_id = s.id""", _sc)
+_sc.close()
+if stories.empty:
+    st.markdown('<p class="lede">No stories saved yet. Each story\'s stats are saved every hour while it\'s live. '
+                "Instagram deletes story stats 24 hours after posting, so stories from before this started can't be added.</p>",
+                unsafe_allow_html=True)
+else:
+    stories["posted_at"] = (pd.to_datetime(stories["posted_at"], utc=True).dt.tz_convert("America/Los_Angeles")
+                            .dt.tz_localize(None))
+    stories = stories.sort_values("posted_at")
+    stories["sv"] = stories["views"].fillna(stories["reach"])
+    age = (pd.Timestamp.now(tz="America/Los_Angeles").tz_localize(None) - stories["posted_at"]).dt.total_seconds() / 86400
+    pool, s_lbl = (stories[age <= 30], "last 30 days") if (age <= 30).any() else (stories, "all time")
+    ex = pool.dropna(subset=["exits"])
+    ex = ex[ex["sv"] > 0]
+    exit_rate = ex["exits"].sum() / ex["sv"].sum() if not ex.empty else None
+    follows = int(pool["follows"].fillna(0).sum())
+    n = len(pool)
+    st.markdown(f'<p class="lede">{n} {"story" if n == 1 else "stories"} posted, {s_lbl}.'
+                + (f' {follows:,} new follow{"" if follows == 1 else "s"} came from stories.' if follows else "")
+                + " Numbers are saved every hour, so each story keeps its last count before Instagram expires it after 24 hours.</p>",
+                unsafe_allow_html=True)
+    st.markdown(f"""<div class="board four glass">
+      <div><div class="v">{fmt_num(pool["sv"].mean())}</div><div class="k">Avg views per story</div></div>
+      <div><div class="v">{fmt_num(pool["reach"].mean())}</div><div class="k">Avg accounts reached</div></div>
+      <div><div class="v">{f"{exit_rate:.1%}" if exit_rate is not None else "n/a"}</div><div class="k">Exit rate (left your stories)</div></div>
+      <div><div class="v">{fmt_num(pool["replies"].sum()) if pool["replies"].notna().any() else "n/a"}</div><div class="k">Replies</div></div>
+    </div>""", unsafe_allow_html=True)
+
+    def s_card(r):
+        img = (f'<img src="{html.escape(r["thumbnail_url"])}" alt="" loading="lazy" referrerpolicy="no-referrer" '
+               f'onerror="this.remove()">' if isinstance(r["thumbnail_url"], str) else "")
+        return (f'<div class="scard"><div class="sthumb">{img}</div>'
+                f'<div class="st-t">{r["posted_at"]:%-I:%M %p}</div>'
+                f'<div class="st-v">{fmt_num(r["sv"])} <span>{"views" if pd.notna(r["views"]) else "reached"}</span></div>'
+                f'<dl><dt>Reach</dt><dd>{fmt_num(r["reach"])}</dd><dt>Replies</dt><dd>{fmt_num(r["replies"])}</dd>'
+                f'<dt>Forward taps</dt><dd>{fmt_num(r["taps_forward"])}</dd><dt>Exits</dt><dd>{fmt_num(r["exits"])}</dd></dl></div>')
+
+    by_day = list(stories.groupby(stories["posted_at"].dt.date))[::-1]
+    show_all = st.session_state.get("st_all", False)
+    blocks = []
+    for d, g in (by_day if show_all else by_day[:7]):
+        first, last = g["sv"].iloc[0], g["sv"].iloc[-1]
+        hold = (f" {last / first:.1%} of first-story viewers stayed to the last."
+                if len(g) > 1 and pd.notna(first) and first and pd.notna(last) else "")
+        blocks.append(f'<div class="sday"><div class="sday-h"><b>{d:%a, %b %-d}</b><span>{len(g)} '
+                      f'{"story" if len(g) == 1 else "stories"}.{hold}</span></div>'
+                      f'<div class="sgrid">{"".join(s_card(r) for _, r in g.iterrows())}</div></div>')
+    st.markdown("".join(blocks), unsafe_allow_html=True)
+    if len(by_day) > 7 and not show_all:
+        if st.button(f"Show {len(by_day) - 7} earlier days"):
+            st.session_state["st_all"] = True
+            st.rerun()
+
 # ---------------- when to post ----------------
 st.markdown("## When to post")
 st.markdown('<p class="lede">Median views by the day and time you posted (Pacific time). '

@@ -227,6 +227,40 @@ class InstagramClient:
                     self.insight_errors.append(f"{m}: {e}")
             return out
 
+    # ---- stories (Instagram only lists stories that are live, and keeps their stats for 24 hours) ----
+    STORY_FIELDS = "id,media_type,media_product_type,timestamp,permalink,thumbnail_url,media_url,caption"
+    STORY_METRICS = ["views", "reach", "replies", "shares", "total_interactions", "follows", "profile_visits"]
+    NAV_KEYS = {"tap_forward": "taps_forward", "tap_back": "taps_back", "tap_exit": "exits", "swipe_forward": "swipe_forward"}
+
+    def list_stories(self) -> list[dict]:
+        self.connect()
+        return self._get(f"{self.uid}/stories", {"fields": self.STORY_FIELDS}).get("data", [])
+
+    def story_insights(self, story_id: str) -> dict:
+        try:
+            out = self._parse(self._get(f"{story_id}/insights", {"metric": ",".join(self.STORY_METRICS)}))
+        except InstagramError:
+            out = {}
+            for m in self.STORY_METRICS:
+                try:
+                    out.update(self._parse(self._get(f"{story_id}/insights", {"metric": m})))
+                except InstagramError as e:
+                    self.insight_errors.append(f"story {m}: {e}")
+        # Taps forward/back, exits and swipes to the next account
+        try:
+            resp = self._get(f"{story_id}/insights", {"metric": "navigation", "breakdown": "story_navigation_action_type"})
+            for row in resp.get("data", []):
+                tv = row.get("total_value") or {}
+                out["navigation"] = tv.get("value")
+                for b in tv.get("breakdowns", []):
+                    for res in b.get("results", []):
+                        key = self.NAV_KEYS.get(str((res.get("dimension_values") or [""])[0]).lower())
+                        if key:
+                            out[key] = res.get("value")
+        except InstagramError as e:
+            self.insight_errors.append(f"story navigation: {e}")
+        return out
+
     @staticmethod
     def _parse(resp: dict) -> dict:
         out = {}
