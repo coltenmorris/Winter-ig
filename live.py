@@ -97,7 +97,9 @@ def live_followers(synced_followers: int | None, hero: bool = False):
         if hero:
             st.markdown(f"""<div class="live-hero">
               <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n, phase)}</div>
-              <div class="l"><span class="dot" aria-hidden="true"></span>live followers on Instagram</div></div>""",
+              <div class="l">followers on Instagram</div>
+              <div class="live-banner" role="status"><span class="dot" aria-hidden="true"></span><b>Live tracker</b>
+              <span>Updates every {REFRESH_SECONDS} seconds</span></div></div>""",
                         unsafe_allow_html=True)
             return
         now = datetime.now(ZoneInfo("America/Los_Angeles")).strftime("%-I:%M:%S %p")
