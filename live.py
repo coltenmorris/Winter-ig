@@ -15,17 +15,30 @@ from sync import clean_token
 REFRESH_SECONDS = 30
 
 
-@st.cache_resource(show_spinner=False)
-def _client(token: str) -> InstagramClient:
+@st.cache_data(show_spinner=False)
+def _account(token: str) -> tuple[str, str]:
+    """Look up which API host and Instagram account this token reads, once per token.
+    Only plain strings are cached, so a redeploy (which reloads the code) can't leave a stale object behind."""
     c = InstagramClient(token)
-    c.connect()  # look up the Instagram account once, not on every refresh
-    return c
+    c.connect()
+    return c.host, c.uid
 
 
 @st.cache_data(ttl=REFRESH_SECONDS - 5, show_spinner=False)
 def _count(token: str) -> int:
-    c = _client(token)
-    return int(c._get(c.uid, {"fields": "followers_count"})["followers_count"])
+    host, uid = _account(token)
+    c = InstagramClient(token)
+    c.host, c.uid = host, uid
+    return int(c._get(uid, {"fields": "followers_count"})["followers_count"])
+
+
+def _live_count(token: str) -> int:
+    """Current follower count. On a failure, forget the saved account lookup and try once more."""
+    try:
+        return _count(token)
+    except Exception:
+        _account.clear()
+        return _count(token)
 
 
 def odometer_html(prev: int, n: int, phase: str = "a") -> str:
@@ -62,8 +75,8 @@ def live_followers(synced_followers: int | None, hero: bool = False):
     @st.fragment(run_every=REFRESH_SECONDS)
     def ticker():
         try:
-            n = _count(token)
-        except InstagramError as e:
+            n = _live_count(token)
+        except Exception as e:  # never let the ticker break the page
             if hero and synced_followers is not None:
                 st.markdown(f'<div class="live-hero"><div class="live-n">{synced_followers:,}</div>'
                             f'<div class="l">followers on Instagram</div></div>', unsafe_allow_html=True)
