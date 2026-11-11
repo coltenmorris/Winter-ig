@@ -52,7 +52,7 @@ def _load(_mtime: float):
     acct = q("SELECT * FROM account_snapshots ORDER BY captured_date")
     daily = q("SELECT * FROM account_daily ORDER BY captured_date")
     demo = q("SELECT * FROM demographics")
-    profile = {k.replace("profile_", ""): v for k, v in
+    profile = {k[len("profile_"):]: v for k, v in
                conn.execute("SELECT key, value FROM settings WHERE key LIKE 'profile_%'").fetchall()}
     conn.close()
     for df in (snaps, acct, daily):

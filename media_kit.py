@@ -66,7 +66,7 @@ v30_label = "Views in the last 30 days" if d30["views"].notna().any() else f"Tot
 best_reel = t[MAIN].max()
 
 # ---------------- hero ----------------
-avatar = (f'<img class="avatar" src="{esc(pic)}" alt="">' if pic
+avatar = (f'<img class="avatar" src="{esc(pic)}" alt="" referrerpolicy="no-referrer">' if pic
           else f'<div class="avatar">{esc((name or handle)[:1].upper())}</div>')
 contact = (f'<a class="contact" href="mailto:{esc(email)}?subject=Partnership%20with%20%40{esc(handle)}">'
            f'Contact for partnerships</a>' if email else "")
