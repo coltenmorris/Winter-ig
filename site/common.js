@@ -29,6 +29,20 @@ function headlinePool() {
 }
 // Age in days from the real posting moment, independent of the viewer's time zone.
 const ageDays = r => (Date.now() - (r.ts ?? Date.parse(r.posted))) / 864e5;
+// Render a long list showing only the first few rows, with a Show more / Show less button after it.
+function showFew(el, rows, { head = "", n = 5, empty = "" } = {}) {
+  let btn = document.getElementById(el.id + "-more");
+  if (!btn) { btn = document.createElement("button"); btn.id = el.id + "-more"; btn.className = "more"; el.after(btn); }
+  let open = false;
+  const draw = () => {
+    el.innerHTML = rows.length ? head + (open ? rows : rows.slice(0, n)).join("") : empty;
+    btn.hidden = rows.length <= n;
+    btn.textContent = open ? "Show less" : `Show ${rows.length - n} more`;
+    btn.setAttribute("aria-expanded", open);
+  };
+  btn.onclick = () => { open = !open; draw(); if (!open) el.scrollIntoView({ block: "nearest" }); };
+  draw();
+}
 const val = (r, k = MAIN) => (r.total && r.total[k] != null) ? r.total[k] : null;
 
 const thumb = (r, badge = "") =>

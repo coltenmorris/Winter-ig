@@ -491,3 +491,18 @@ def reel_dialog(media_id: str):
         ok, note = flags_mod.save_flags(fl, f"Update tags for {media_id}")
         st.cache_data.clear()
         (st.success if ok else st.warning)(note)
+
+
+def show_few(df, key: str, n: int = 5):
+    """First n rows unless the list has been expanded with show_few_button."""
+    return df if st.session_state.get(key, False) else df.head(n)
+
+
+def show_few_button(df, key: str, n: int = 5):
+    """Show more / Show less toggle placed after a list cut by show_few."""
+    if len(df) <= n:
+        return
+    is_open = st.session_state.get(key, False)
+    if st.button("Show less" if is_open else f"Show {len(df) - n} more", key=key + "_btn"):
+        st.session_state[key] = not is_open
+        st.rerun()

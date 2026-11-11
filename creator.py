@@ -8,7 +8,7 @@ import flags as flags_mod
 from ig_client import InstagramError
 import html
 
-from shared import (DUSK, FERN, MOSS, SAGE, SAND, fmt_num, load, private_nav, reel_dialog,
+from shared import (show_few, show_few_button, DUSK, FERN, MOSS, SAGE, SAND, fmt_num, load, private_nav, reel_dialog,
                     require_password, video_table)
 from sync import run_sync
 
@@ -276,7 +276,7 @@ if choice is not None:
 rows = ['<div class="rl head"><span>Reel</span><span class="n">Views</span>'
         f'<span class="n">+{window}d</span><span class="n hide-sm">Engagement</span>'
         '<span class="n hide-sm">Watch</span></div>']
-for i, r in order.head(60).iterrows():
+for i, r in show_few(order, "reels_open", 10).iterrows():
     trial = ('<span class="trial">Trial</span>' if r["is_trial"] else "") + \
         (f'<span class="trial">Ad{": " + html.escape(r["brand"]) if r["brand"] else ""}</span>' if r["is_ad"] else "")
     watch = f"{r['avg_watch_s']:.1f}s" if pd.notna(r["avg_watch_s"]) else ""
@@ -285,3 +285,4 @@ for i, r in order.head(60).iterrows():
                 f'<span class="n">{fmt_num(r["views"])}</span><span class="n">+{fmt_num(r["views_gained"])}</span>'
                 f'<span class="n hide-sm">{r["engagement_rate"]:.1%}</span><span class="n hide-sm">{watch}</span></div>')
 st.markdown('<div class="glass">' + "".join(rows) + "</div>", unsafe_allow_html=True)
+show_few_button(order, "reels_open", 10)

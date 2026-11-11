@@ -11,7 +11,7 @@ import db
 import flags as flags_mod
 
 from shared import (BARK, DUSK, FERN, MOSS, SAGE, fmt_num, load, private_nav,
-                    reel_dialog, require_password, video_table)
+                    reel_dialog, require_password, show_few, show_few_button, video_table)
 
 require_password("Posting calendar")
 private_nav()
@@ -154,7 +154,7 @@ if kind == "Stories":
     if rt.empty:
         st.markdown('<p class="lede">No stories in this range. Stories are saved from November 11, 2026 on.</p>',
                     unsafe_allow_html=True)
-    for _, s in rt.iterrows():
+    for _, s in show_few(rt, "range_open").iterrows():
         img = (f'<img src="{html.escape(s["thumbnail_url"])}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">'
                if isinstance(s["thumbnail_url"], str) else '<div class="noimg"></div>')
         st.markdown(f"""<div class="daycard glass sday-card">{img}<div>
@@ -162,6 +162,7 @@ if kind == "Stories":
             <div class="stats"><b>{fmt_num(s['sv'])}</b> {"views" if pd.notna(s['views']) else "reached"} &nbsp; <b>{fmt_num(s['reach'])}</b> reached
             &nbsp; <b>{fmt_num(s['replies'])}</b> replies &nbsp; <b>{fmt_num(s['exits'])}</b> exits</div></div></div>""",
                     unsafe_allow_html=True)
+    show_few_button(rt, "range_open")
     st.stop()
 key, asc = {
     "Newest first": ("posted_at", False), "Oldest first": ("posted_at", True),
@@ -179,7 +180,7 @@ if rt.empty:
     st.markdown(f'<p class="lede">No {noun} in this range.</p>', unsafe_allow_html=True)
     st.stop()
 
-for _, r in rt.iterrows():
+for _, r in show_few(rt, "range_open").iterrows():
     thumb = r["thumbnail_url"] if isinstance(r["thumbnail_url"], str) and r["thumbnail_url"] else None
     img = (f'<img src="{html.escape(thumb)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">'
            if thumb else '<div class="noimg"></div>')
@@ -193,3 +194,4 @@ for _, r in rt.iterrows():
         <div class="stats">{stats}</div></div></div>""", unsafe_allow_html=True)
     if st.button("View analytics", key=f"open_{r['id']}"):
         reel_dialog(r["id"])
+show_few_button(rt, "range_open")
