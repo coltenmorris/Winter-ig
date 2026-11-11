@@ -119,6 +119,7 @@ def build():
         "audiences": audiences, "audiences_prev": {"followers": audiences_prev.get("followers", {})},
         "viewers_since": viewers_since,
         "views_30d": float(setting("views_30d")) if setting("views_30d") not in (None, "", "None") else None, "reels": reels,
+        "created": os.getenv("ACCOUNT_CREATED") or "June 15th, 2026",
         "contact": os.getenv("CONTACT_EMAIL") or None, "tagline": os.getenv("CREATOR_TAGLINE") or None,
         "updated": datetime.now(timezone.utc).astimezone(TZ).strftime("%B %-d, %Y"),
     }

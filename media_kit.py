@@ -74,6 +74,7 @@ else:
 best_reel = t[MAIN].max()
 
 # ---------------- hero ----------------
+created = cfg("ACCOUNT_CREATED", "June 15th, 2026")
 avatar = (f'<img class="avatar" src="{esc(pic)}" alt="" referrerpolicy="no-referrer">' if pic
           else f'<div class="avatar">{esc((name or handle)[:1].upper())}</div>')
 contact = (f'<a class="contact" href="mailto:{esc(email)}?subject=Partnership%20with%20%40{esc(handle)}">'
@@ -91,6 +92,7 @@ st.markdown(f"""
     <div class="stripes" style="margin-top:14px"></div>
     <div class="row"><span class="handle">@{esc(handle)}</span>{avatar}</div>
     {f'<div class="bio">{esc(bio)}</div>' if bio else ''}
+    {f'<div class="created">Account created {esc(created)}</div>' if created else ''}
     {contact}
   </div>
 </div>

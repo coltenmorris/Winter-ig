@@ -62,6 +62,7 @@ let html = `
     <div class="stripes" style="margin-top:14px"></div>
     <div class="row"><span class="handle">@${esc(P.username)}</span>${avatar}</div>
     ${(D.tagline || P.bio) ? `<div class="bio">${esc(D.tagline || P.bio)}</div>` : ""}
+    ${D.created ? `<div class="created">Account created ${esc(D.created)}</div>` : ""}
     ${contact}
   </div>
 </section>

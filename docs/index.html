@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Media Kit</title>
 <meta name="description" content="Instagram creator media kit with audience and performance stats.">
-<link rel="stylesheet" href="style.css?v=202611110358">
+<link rel="stylesheet" href="style.css?v=202611110359">
 </head>
 <body>
 <div class="wrap">
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
   <main id="app"></main>
 </div>
-<script src="data.js?v=202611110358"></script>
+<script src="data.js?v=202611110359"></script>
 <script>
 if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -26,7 +26,7 @@ if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   window.__EMPTY = true;
 }
 </script>
-<script src="common.js?v=202611110358"></script>
+<script src="common.js?v=202611110359"></script>
 <script>
 if (!window.__EMPTY) {
 mark("kit");
@@ -62,6 +62,7 @@ let html = `
     <div class="stripes" style="margin-top:14px"></div>
     <div class="row"><span class="handle">@${esc(P.username)}</span>${avatar}</div>
     ${(D.tagline || P.bio) ? `<div class="bio">${esc(D.tagline || P.bio)}</div>` : ""}
+    ${D.created ? `<div class="created">Account created ${esc(D.created)}</div>` : ""}
     ${contact}
   </div>
 </section>
