@@ -15,6 +15,12 @@ gap = float(sys.argv[2]) if len(sys.argv) > 2 else 20
 c = InstagramClient(get_token())
 c.connect()
 user = c._get(c.uid, {"fields": "username"})["username"]
+import json, requests
+r = requests.get(f"{c.host}/{c.version}/{c.uid}", params={"fields": "followers_count", "access_token": c.token}, timeout=30)
+for h in ("x-app-usage", "x-business-use-case-usage", "x-ad-account-usage"):
+    if h in r.headers:
+        print(f"{h}: {r.headers[h]}", flush=True)
+print("status", r.status_code, r.text[:200], flush=True)
 last = {}
 end = time.time() + mins * 60
 while time.time() < end:
