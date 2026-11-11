@@ -252,28 +252,34 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 .live .dot {{ width:8px; height:8px; border-radius:50%; background:#7CC47F; box-shadow: 0 0 0 0 rgba(124,196,127,.6); animation: livepulse 2s infinite; }}
 @keyframes livepulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(124,196,127,.55); }} 70% {{ box-shadow: 0 0 0 9px rgba(124,196,127,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(124,196,127,0); }} }}
 @media (prefers-reduced-motion: reduce) {{ .live .dot {{ animation: none; }} }}
-.live-n {{ font-size: clamp(3rem, 9vw, 5.6rem); font-weight: 800; letter-spacing: -.055em; line-height: .95; color:{FERNB};
+.live-n {{ font-size: clamp(3rem, 9vw, 5.6rem); font-weight: 800; letter-spacing: -.055em; line-height: 1.15; padding: .04em 0 .08em; color:{FERNB};
            font-variant-numeric: tabular-nums; margin-top: 6px; }}
-/* Odometer: changed digits roll vertically. The window is taller than the text so glyphs never clip. */
-.live-n {{ display:flex; align-items:flex-start; --row: 1.18em; line-height: var(--row) !important; }}
+/* Odometer: changed digits move vertically. No clipping anywhere, so digits always render whole. */
+.live-n {{ display:flex; align-items:baseline; }}
 .live-n .d, .live-n .d span {{ color:{FERNB} !important; }}
-.live-n .d {{ display:inline-block; height: var(--row); line-height: var(--row); overflow:hidden; clip-path: inset(0); contain: paint; }}
+.live-n .d {{ display:inline-block; position:relative; }}
 .live-n .d.sep {{ font-feature-settings: "tnum" 0, "pnum" 1; font-variant-numeric: proportional-nums; }}
-.live-n .roll .reel {{ display:flex; flex-direction:column; will-change: transform; }}
-.live-n .roll .reel > span {{ display:block; height: var(--row); line-height: var(--row); }}
-.live-n .roll.up .reel {{ animation: roll-up .9s cubic-bezier(.2,.8,.2,1) both, flash 1.8s ease-out both; }}
-.live-n .roll.down .reel {{ animation: roll-down .9s cubic-bezier(.2,.8,.2,1) both; }}
-@keyframes roll-up {{ from {{ transform: translateY(0); }} to {{ transform: translateY(calc(-1 * var(--row))); }} }}
-@keyframes roll-down {{ from {{ transform: translateY(calc(-1 * var(--row))); }} to {{ transform: translateY(0); }} }}
+.live-n .roll .new {{ display:inline-block; }}
+.live-n .roll .old {{ position:absolute; left:0; top:0; pointer-events:none; }}
+.live-n .roll.up .new {{ animation: in-up .75s cubic-bezier(.2,.8,.2,1) both, flash 1.8s ease-out both; }}
+.live-n .roll.up .old {{ animation: out-up .75s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down .new {{ animation: in-down .75s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down .old {{ animation: out-down .75s cubic-bezier(.2,.8,.2,1) both; }}
+@keyframes in-up {{ from {{ transform: translateY(.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
+@keyframes out-up {{ from {{ transform: none; opacity: 1; }} to {{ transform: translateY(-.55em); opacity: 0; }} }}
+@keyframes in-down {{ from {{ transform: translateY(-.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
+@keyframes out-down {{ from {{ transform: none; opacity: 1; }} to {{ transform: translateY(.55em); opacity: 0; }} }}
 @keyframes flash {{ from {{ filter: brightness(1.45); }} to {{ filter: brightness(1); }} }}
 @media (prefers-reduced-motion: reduce) {{
-  .live-n .roll.up .reel {{ animation: none !important; transform: translateY(calc(-1 * var(--row))); }}
-  .live-n .roll.down .reel {{ animation: none !important; transform: translateY(0); }}
+  .live-n .roll .new {{ animation: none !important; }}
+  .live-n .roll .old {{ display: none; }}
 }}
 /* Live count in the media kit hero, in place of the big follower number */
 .hero.solo {{ grid-template-columns: 1fr; }}
 .live-hero {{ text-align:right; padding: 0 0 6px; }}
-.live-hero .live-n {{ justify-content:flex-end; font-size: clamp(4rem, 11vw, 9rem); font-weight: 800; letter-spacing: -.06em; }}
+.live-hero .live-n {{ justify-content:flex-end; font-size: clamp(4rem, 11vw, 9rem); font-weight: 800; letter-spacing: -.06em;
+                      line-height: 1.15 !important; padding: .06em 0 .1em; overflow: visible; }}
+[data-testid="stMarkdownContainer"]:has(.live-hero), [data-testid="stMarkdownContainer"]:has(.live) {{ overflow: visible !important; }}
 .live-hero .l {{ color:{STONE}; margin-top: 4px; font-weight: 500; display:flex; gap:8px; align-items:center; justify-content:flex-end; }}
 .live-hero .dot {{ width:8px; height:8px; border-radius:50%; background:#7CC47F; animation: livepulse 2s infinite; }}
 @media (prefers-reduced-motion: reduce) {{ .live-hero .dot {{ animation: none; }} }}

@@ -29,7 +29,9 @@ def _count(token: str) -> int:
 
 
 def odometer_html(prev: int, n: int) -> str:
-    """Follower count where each changed digit rolls vertically: up when the count rises, down when it falls."""
+    """Follower count where each changed digit moves vertically: the new digit slides in and the old one
+    slides out and fades (upward when the count rises, downward when it falls). Nothing is clipped, so the
+    digits render whole in any font."""
     new, old = f"{n:,}", f"{prev:,}"
     width = max(len(new), len(old))
     new, old = new.rjust(width), old.rjust(width)
@@ -43,10 +45,8 @@ def odometer_html(prev: int, n: int) -> str:
         elif o == c:
             out.append(f'<span class="d">{c}</span>')
         else:
-            # stack old and new; the roll animation slides from one to the other
-            stack = f"<span>{o.strip() or '&nbsp;'}</span><span>{c}</span>" if direction == "up" \
-                else f"<span>{c}</span><span>{o.strip() or '&nbsp;'}</span>"
-            out.append(f'<span class="d roll {direction}"><span class="reel">{stack}</span></span>')
+            gone = f'<span class="old" aria-hidden="true">{o}</span>' if o.strip() else ""
+            out.append(f'<span class="d roll {direction}">{gone}<span class="new">{c}</span></span>')
     return "".join(out)
 
 
