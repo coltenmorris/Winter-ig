@@ -1,6 +1,6 @@
 """Live follower ticker for the private analytics page (Streamlit only).
 
-Asks Instagram for the current follower count every 30 seconds using the IG_ACCESS_TOKEN
+Asks Instagram for the current follower count every 5 seconds using the IG_ACCESS_TOKEN
 Streamlit secret. The token stays on the server; it is never sent to the browser.
 """
 from datetime import datetime
@@ -12,7 +12,7 @@ from ig_client import InstagramClient, InstagramError
 from shared import cfg
 from sync import clean_token, describe_token
 
-REFRESH_SECONDS = 30
+REFRESH_SECONDS = 5
 
 
 @st.cache_data(show_spinner=False)
@@ -24,7 +24,7 @@ def _account(token: str) -> tuple[str, str]:
     return c.host, c.uid
 
 
-@st.cache_data(ttl=REFRESH_SECONDS - 5, show_spinner=False)
+@st.cache_data(ttl=REFRESH_SECONDS - 1, show_spinner=False)
 def _count(token: str) -> int:
     host, uid = _account(token)
     c = InstagramClient(token)

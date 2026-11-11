@@ -316,4 +316,4 @@ st.markdown(f'<div class="foot">Numbers come directly from the Instagram API and
 
 # ---------------- live follower count (off by default, switch at the very bottom) ----------------
 st.toggle("Show live follower count", value=False, key="live_kit",
-          help="Replaces the follower number at the top with a live count that updates every 30 seconds.")
+          help="Replaces the follower number at the top with a live count that updates every 5 seconds.")
