@@ -63,6 +63,8 @@ h3 { font-size: 1.05rem; letter-spacing: -.01em; margin: 0 0 12px; font-weight: 
 .board > div + div { padding-left: 20px; border-left: 1px solid var(--rule); }
 .board .v { font-size: clamp(2rem, 4vw, 3.1rem); font-weight: 700; line-height: 1; letter-spacing: -.045em; }
 .board .k { color: var(--stone); font-size: .9rem; margin-top: 10px; }
+.board.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.board.five .v { font-size: clamp(1.8rem, 3.2vw, 2.7rem); }
 
 /* Reel cards */
 .reels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 20px; align-items: start; }
@@ -214,6 +216,8 @@ table.ms td { font-size: 1.15rem; font-weight: 700; letter-spacing: -.03em; }
   .board, .kpis { grid-template-columns: repeat(2, 1fr); }
   .board > div:nth-child(3), .kpis > div:nth-child(3) { border-left: none; padding-left: 0; }
   .board > div:nth-child(n+3), .kpis > div:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  .board.five { grid-template-columns: repeat(2, 1fr); }
+  .board.five > div:nth-child(5) { grid-column: span 2; border-left: none; padding-left: 0; }
   .reels { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 12px; }
   .cols { grid-template-columns: 1fr; }
   .controls, .controls.range { grid-template-columns: 1fr 1fr; }

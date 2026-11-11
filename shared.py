@@ -172,6 +172,8 @@ a {{ color: {FERNB}; }}
 .board > div + div {{ padding-left: 20px; border-left: 1px solid {RULE_C}; }}
 .board .v {{ font-size: clamp(2rem, 4vw, 3.1rem); font-weight: 700; line-height: 1; letter-spacing: -.045em; color: {MIST}; }}
 .board .k {{ color: {STONE}; font-size: .9rem; margin-top: 10px; }}
+.board.five {{ grid-template-columns: repeat(5, minmax(0, 1fr)); }}
+.board.five .v {{ font-size: clamp(1.8rem, 3.2vw, 2.7rem); }}
 .board .d {{ color: {FERNB}; font-size: .85rem; margin-top: 4px; }}
 
 /* Reel cards */
@@ -264,6 +266,8 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
   .board {{ grid-template-columns: repeat(2, 1fr); }}
   .board > div:nth-child(3) {{ border-left:none; padding-left: 0; }}
   .board > div:nth-child(n+3) {{ border-top: 1px solid {RULE_C}; }}
+  .board.five {{ grid-template-columns: repeat(2, 1fr); }}
+  .board.five > div:nth-child(5) {{ grid-column: span 2; border-left: none; padding-left: 0; }}
   .reels {{ grid-template-columns: repeat(2, minmax(0,1fr)); gap: 22px 12px; }}
   .bars .row {{ grid-template-columns: 7rem 1fr 2.8rem; }}
   .bars.mom .row {{ grid-template-columns: 6rem 1fr 2.6rem 4.6rem; }}
