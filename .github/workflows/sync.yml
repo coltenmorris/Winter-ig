@@ -1,8 +1,13 @@
 name: Daily Instagram sync
 
+# Runs at 12 AM, 10 AM and 5 PM Pacific. GitHub schedules in UTC and Pacific shifts an hour for
+# daylight saving, so both UTC times are listed for each slot and the first step skips the one that
+# doesn't land on the right Pacific hour.
 on:
   schedule:
-    - cron: "17 12 * * *"   # every day around 7am Eastern
+    - cron: "4 7,8 * * *"     # 12 AM Pacific (7 UTC in PDT, 8 UTC in PST)
+    - cron: "4 17,18 * * *"   # 10 AM Pacific
+    - cron: "4 0,1 * * *"     # 5 PM Pacific
   workflow_dispatch:         # lets you run it anytime from the Actions tab
   push:
     branches: [main]
@@ -18,23 +23,41 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    env:
+      TZ: America/Los_Angeles   # snapshot dates follow Pacific days, like the dashboard
     steps:
+      - name: Check it's 12 AM, 10 AM or 5 PM Pacific
+        id: when
+        run: |
+          hour=$(date +%H)
+          if [ "${{ github.event_name }}" != "schedule" ] || [ "$hour" = "00" ] || [ "$hour" = "10" ] || [ "$hour" = "17" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping: it's ${hour}:xx Pacific (this is the daylight-saving twin of a scheduled slot)."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.when.outputs.run == 'true'
 
       - uses: actions/setup-python@v5
+        if: steps.when.outputs.run == 'true'
         with:
           python-version: "3.12"
 
       - name: Install dependencies
+        if: steps.when.outputs.run == 'true'
         run: pip install requests pandas python-dotenv
 
       - name: Pull Instagram stats
+        if: steps.when.outputs.run == 'true'
         env:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           GH_PAT: ${{ secrets.GH_PAT }}
         run: python sync.py
 
       - name: Build website
+        if: steps.when.outputs.run == 'true'
         env:
           CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
           CREATOR_TAGLINE: ${{ vars.CREATOR_TAGLINE }}
@@ -42,10 +65,11 @@ jobs:
         run: python build_site.py
 
       - name: Save database and website to repo
+        if: steps.when.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f ig_analytics.db docs
-          git diff --cached --quiet || git commit -m "Daily Instagram stats $(date -u +%F)"
+          git diff --cached --quiet || git commit -m "Instagram stats $(date +"%b %-d, %-I %p") PT"
           git pull --rebase -q || true
           git push
