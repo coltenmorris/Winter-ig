@@ -2,6 +2,9 @@ name: Diagnose Instagram data
 
 on:
   workflow_dispatch:
+    inputs:
+      script:
+        default: "diagnose_timeframes.py"
 
 jobs:
   diagnose:
@@ -15,4 +18,4 @@ jobs:
       - name: Ask Instagram for each metric
         env:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
-        run: python diagnose_timeframes.py
+        run: python ${{ inputs.script || 'diagnose_timeframes.py' }}
