@@ -282,14 +282,14 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 .live-n .d.sep {{ font-feature-settings: "tnum" 0, "pnum" 1; font-variant-numeric: proportional-nums; }}
 .live-n .roll .new {{ display:inline-block; }}
 .live-n .roll .old {{ position:absolute; left:0; top:0; pointer-events:none; }}
-.live-n .roll.up.a .new {{ animation: in-up-a .75s cubic-bezier(.2,.8,.2,1) both, flash-a 1.8s ease-out both; }}
-.live-n .roll.up.b .new {{ animation: in-up-b .75s cubic-bezier(.2,.8,.2,1) both, flash-b 1.8s ease-out both; }}
-.live-n .roll.up.a .old {{ animation: out-up-a .75s cubic-bezier(.2,.8,.2,1) both; }}
-.live-n .roll.up.b .old {{ animation: out-up-b .75s cubic-bezier(.2,.8,.2,1) both; }}
-.live-n .roll.down.a .new {{ animation: in-down-a .75s cubic-bezier(.2,.8,.2,1) both; }}
-.live-n .roll.down.b .new {{ animation: in-down-b .75s cubic-bezier(.2,.8,.2,1) both; }}
-.live-n .roll.down.a .old {{ animation: out-down-a .75s cubic-bezier(.2,.8,.2,1) both; }}
-.live-n .roll.down.b .old {{ animation: out-down-b .75s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.up.a .new {{ animation: in-up-a 1.6s cubic-bezier(.2,.8,.2,1) both, flash-a 3s ease-out both; }}
+.live-n .roll.up.b .new {{ animation: in-up-b 1.6s cubic-bezier(.2,.8,.2,1) both, flash-b 3s ease-out both; }}
+.live-n .roll.up.a .old {{ animation: out-up-a 1.6s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.up.b .old {{ animation: out-up-b 1.6s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down.a .new {{ animation: in-down-a 1.6s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down.b .new {{ animation: in-down-b 1.6s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down.a .old {{ animation: out-down-a 1.6s cubic-bezier(.2,.8,.2,1) both; }}
+.live-n .roll.down.b .old {{ animation: out-down-b 1.6s cubic-bezier(.2,.8,.2,1) both; }}
 @keyframes in-up-a {{ from {{ transform: translateY(.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
 @keyframes in-up-b {{ from {{ transform: translateY(.55em); opacity: 0; }} to {{ transform: none; opacity: 1; }} }}
 @keyframes out-up-a {{ from {{ transform: none; opacity: 1; }} to {{ transform: translateY(-.55em); opacity: 0; }} }}
@@ -315,6 +315,21 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 .live-banner {{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding: 8px 14px; margin-bottom: 18px;
   border: 1px solid rgba(124,196,127,.35); background: rgba(124,196,127,.08); color:{MIST}; font-size:.9rem; }}
 .live-hero .live-banner {{ margin: 14px 0 0; }}
+.confetti {{ position: fixed; inset: 0; z-index: 9999; pointer-events: none; overflow: hidden;
+  animation: confetti-fade 4.6s ease-in forwards; }}
+.confetti i {{ position: absolute; top: -6vh; display: block; border-radius: 1px; will-change: transform;
+  animation-name: confetti-fall; animation-timing-function: cubic-bezier(.25,.45,.45,1); animation-fill-mode: both; }}
+@keyframes confetti-fall {{ from {{ transform: translate3d(0,0,0) rotate(0deg); }}
+  to {{ transform: translate3d(var(--dx), 112vh, 0) rotate(var(--r)); }} }}
+@keyframes confetti-fade {{ 0%, 80% {{ opacity: 1; }} 100% {{ opacity: 0; }} }}
+.milestone {{ position: fixed; left: 50%; top: 38%; z-index: 10000; pointer-events: none; transform: translate(-50%, -50%);
+  text-align: center; color: {MIST}; animation: milestone 4.6s ease forwards; padding: 36px 56px;
+  background: radial-gradient(closest-side, rgba(14,20,17,.85), rgba(14,20,17,0)); text-shadow: 0 2px 24px rgba(14,20,17,.9); }}
+.milestone b {{ display: block; font-size: clamp(3rem, 9vw, 7rem); font-weight: 800; letter-spacing: -.05em; line-height: 1; color: {FERNB}; }}
+.milestone span {{ font-size: 1.1rem; font-weight: 600; }}
+@keyframes milestone {{ 0% {{ opacity: 0; transform: translate(-50%, -40%) scale(.9); }} 12%, 75% {{ opacity: 1; transform: translate(-50%, -50%) scale(1); }}
+  100% {{ opacity: 0; transform: translate(-50%, -55%) scale(1); }} }}
+@media (prefers-reduced-motion: reduce) {{ .confetti {{ display: none; }} }}
 .live-banner.paused {{ border-color: rgba(230,212,156,.35); background: rgba(230,212,156,.07); }}
 .live-banner.paused .dot {{ background: {LAMP}; animation: none; }}
 .live-why {{ color:{STONE}; font-size:.78rem; margin-top: 6px; max-width: 420px; margin-left: auto; overflow-wrap: anywhere; }}

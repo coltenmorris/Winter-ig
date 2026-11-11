@@ -4,6 +4,7 @@ Asks Instagram for the current follower count every 5 seconds using the IG_ACCES
 Streamlit secret. The token stays on the server; it is never sent to the browser.
 """
 import html
+import random
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -14,6 +15,22 @@ from shared import cfg
 from sync import clean_token, describe_token
 
 REFRESH_SECONDS = 5
+MILESTONE = 50_000
+CONFETTI_COLORS = ["#8FAF78", "#E6D49C", "#D3DBCF", "#4E6A47", "#C9A27A", "#B5D69C"]
+
+
+def confetti_html(n: int) -> str:
+    """One-time confetti rain over the whole screen (pure CSS, gone in under 5 seconds, before the next refresh)."""
+    rnd = random.Random(n)
+    bits = []
+    for _ in range(140):
+        w = rnd.uniform(6, 11)
+        bits.append(
+            f'<i style="left:{rnd.uniform(0, 100):.1f}%;width:{w:.0f}px;height:{w * rnd.uniform(.4, .7):.0f}px;'
+            f'background:{rnd.choice(CONFETTI_COLORS)};--dx:{rnd.uniform(-18, 18):.0f}vw;--r:{rnd.uniform(-720, 720):.0f}deg;'
+            f'animation-duration:{rnd.uniform(2.6, 3.6):.2f}s;animation-delay:{rnd.uniform(0, .9):.2f}s"></i>')
+    return (f'<div class="confetti" aria-hidden="true">{"".join(bits)}</div>'
+            f'<div class="milestone" role="status"><b>{MILESTONE:,}</b><span>followers on Instagram</span></div>')
 
 
 @st.cache_data(show_spinner=False)
@@ -101,6 +118,12 @@ def live_followers(synced_followers: int | None, hero: bool = False):
         start = st.session_state.setdefault("live_start", n)
         prev = st.session_state.get(key, n)
         st.session_state[key] = n
+        # 50K celebration: once per visit, when the count crosses 50,000 while watching
+        # (or within the first 100 followers past it, so a reload right after still gets it)
+        if (n >= MILESTONE and not st.session_state.get("celebrated_50k")
+                and (prev < MILESTONE or n < MILESTONE + 100)):
+            st.session_state["celebrated_50k"] = True
+            st.markdown(confetti_html(n), unsafe_allow_html=True)
         if hero:
             st.markdown(f"""<div class="live-hero">
               <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n, phase)}</div>
