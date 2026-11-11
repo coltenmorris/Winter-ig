@@ -124,15 +124,21 @@ if (audNames.length) {
     `<button data-a="${a}" aria-pressed="false">${a === "viewers" ? "Viewers, all time" : "Followers"}</button>`).join("")}</div>` : "") + `<div id="audbody"></div>`;
 }
 
-// Top reels
-const topReels = [...(recent.length >= 6 ? R.filter(r => (now - dt(r.posted)) / DAY <= 90) : R)]
-  .filter(r => val(r) != null).sort((a, b) => val(b) - val(a)).slice(0, 6);
-html += `<h2>Top reels</h2><p class="lede">Most-${HAS_VIEWS ? "viewed" : "liked"} reels${recent.length >= 6 ? " from the last 90 days" : ""}. Tap one for its numbers.</p>
-<div class="reels">${topReels.map((r, i) => `<button class="reel" onclick="openReel('${r.id}')">${thumb(r, i === 0 ? '<span class="badge">Top reel</span>' : "")}
-  <div class="card glass"><div class="meta"><div><b>${fmt(val(r))}</b><span>${MAIN_LABEL}</span></div>
-  ${r.total.engagement != null ? `<div style="text-align:right"><b>${pct(r.total.engagement)}</b><span>engagement</span></div>`
-                               : `<div style="text-align:right"><b>${fmt(r.total.comments)}</b><span>comments</span></div>`}</div>
-  <div class="t">${esc(r.title)}, ${fmtDate(r.posted, { month: "short", day: "numeric", year: "numeric" })}</div></div></button>`).join("")}</div>`;
+// Top reels: all time by default, with a last-90-days option
+const topCards = range => {
+  const pool = range === "90" ? R.filter(r => (now - dt(r.posted)) / DAY <= 90) : R;
+  const list = pool.filter(r => val(r) != null).sort((a, b) => val(b) - val(a)).slice(0, 6);
+  return `<p class="lede">Most-${HAS_VIEWS ? "viewed" : "liked"} reels${range === "90" ? " posted in the last 90 days" : ""}. Tap one for its numbers.</p>` +
+    (list.length ? `<div class="reels">${list.map((r, i) => `<button class="reel" onclick="openReel('${r.id}')">${thumb(r, i === 0 ? '<span class="badge">Top reel</span>' : "")}
+    <div class="card glass"><div class="meta"><div><b>${fmt(val(r))}</b><span>${MAIN_LABEL}</span></div>
+    ${r.total.engagement != null ? `<div style="text-align:right"><b>${pct(r.total.engagement)}</b><span>engagement</span></div>`
+                                 : `<div style="text-align:right"><b>${fmt(r.total.comments)}</b><span>comments</span></div>`}</div>
+    <div class="t">${esc(r.title)}, ${fmtDate(r.posted, { month: "short", day: "numeric", year: "numeric" })}</div></div></button>`).join("")}</div>`
+      : `<p class="lede">No reels posted in the last 90 days.</p>`);
+};
+html += `<h2>Top reels</h2><div class="seg" role="group" aria-label="Top reels range" id="topseg">
+  <button data-r="all" aria-pressed="true">All time</button><button data-r="90" aria-pressed="false">Last 90 days</button></div>
+  <div id="topbody">${topCards("all")}</div>`;
 
 // Brand partnerships
 if (ADS.length) {
@@ -158,6 +164,11 @@ if (D.followers.length > 1) {
 }
 html += `<div class="foot">Numbers come directly from the Instagram API and update daily. Last updated ${esc(D.updated)}.</div>`;
 document.getElementById("app").innerHTML = html;
+document.getElementById("topseg").addEventListener("click", e => {
+  const b = e.target.closest("button[data-r]"); if (!b) return;
+  document.querySelectorAll("#topseg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  document.getElementById("topbody").innerHTML = topCards(b.dataset.r);
+});
 if (audNames.length) {
   renderAudience(audNames[0]);
   const seg = document.getElementById("audseg");

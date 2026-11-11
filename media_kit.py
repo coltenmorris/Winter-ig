@@ -256,10 +256,14 @@ if not demo.empty:
 
 # ---------------- top reels ----------------
 st.markdown("## Top reels")
-st.markdown(f'<p class="lede">Most-{"viewed" if HAS_VIEWS else "liked"} reels.</p>', unsafe_allow_html=True)
-top = t[t["age_days"] <= 90].sort_values(MAIN, ascending=False).head(6)
-if len(top) < 6:
-    top = t.sort_values(MAIN, ascending=False).head(6)
+top_range = st.segmented_control("Top reels range", ["All time", "Last 90 days"], default="All time",
+                                 key="top_range", label_visibility="collapsed") or "All time"
+pool_top = t if top_range == "All time" else t[t["age_days"] <= 90]
+st.markdown(f'<p class="lede">Most-{"viewed" if HAS_VIEWS else "liked"} reels'
+            f'{"" if top_range == "All time" else " posted in the last 90 days"}.</p>', unsafe_allow_html=True)
+top = pool_top.sort_values(MAIN, ascending=False).head(6)
+if top.empty:
+    st.markdown('<p class="lede">No reels posted in the last 90 days.</p>', unsafe_allow_html=True)
 cards = []
 blooms = ["30% 25%", "70% 30%", "25% 70%", "65% 65%", "45% 20%", "20% 45%"]
 for i, (_, r) in enumerate(top.iterrows()):
