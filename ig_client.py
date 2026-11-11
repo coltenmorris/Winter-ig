@@ -162,6 +162,14 @@ class InstagramClient:
                 pass
         return out
 
+    def account_total(self, metric: str, days: int = 30):
+        """Account-wide total for the last `days` days (Instagram allows up to 30) in one request."""
+        import time
+        until = int(time.time())
+        r = self._get(f"{self.uid}/insights", {"metric": metric, "period": "day", "metric_type": "total_value",
+                                               "since": until - days * 86400, "until": until})
+        return r["data"][0]["total_value"]["value"]
+
     def demographics(self, metric: str = "follower_demographics", timeframe: str = "this_month") -> dict:
         """Audience breakdowns by age, gender, country, city. Needs 100+ followers.
         metric: follower_demographics, reached_audience_demographics (viewers) or engaged_audience_demographics."""

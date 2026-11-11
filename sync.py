@@ -90,6 +90,13 @@ def run_sync(log=print, include_photos: bool = True) -> int:
     db.save_profile(conn, me)
     yesterday = (date.today() - timedelta(days=1)).isoformat()
     db.upsert_account_daily(conn, yesterday, client.account_daily())
+    # True 30-day totals straight from Instagram (no need to wait for 30 days of daily syncs)
+    for metric in ("views", "reach"):
+        try:
+            db.set_setting(conn, f"{metric}_30d", client.account_total(metric, 30))
+            db.set_setting(conn, "totals_30d_asof", today)
+        except (InstagramError, KeyError, IndexError) as e:
+            log(f"Could not get 30-day {metric}: {e}")
     this_month = date.today().strftime("%Y-%m")
     last_month = (date.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
     followers_demo = client.demographics()

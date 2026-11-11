@@ -61,8 +61,16 @@ def last_month(cur, prev, show):
     return f'<div class="lm">{arrow}Last month {show(prev)}</div>'
 
 d30 = daily[daily["captured_date"] > now - pd.Timedelta(days=30)]
-views_30 = d30["views"].sum() if d30["views"].notna().any() else t[MAIN].sum()
-v30_label = "Views in the last 30 days" if d30["views"].notna().any() else f"Total {MAIN_L} across reels"
+# Prefer Instagram's own 30-day total; otherwise only sum daily numbers once they cover the full 30 days.
+_c = db.connect()
+_v30 = _c.execute("SELECT value FROM settings WHERE key='views_30d'").fetchone()
+_c.close()
+if _v30 and _v30[0] not in (None, "", "None"):
+    views_30, v30_label = float(_v30[0]), "Views in the last 30 days"
+elif d30["views"].notna().sum() >= 28:
+    views_30, v30_label = d30["views"].sum(), "Views in the last 30 days"
+else:
+    views_30, v30_label = t[MAIN].sum(), f"Total {MAIN_L} across reels"
 best_reel = t[MAIN].max()
 
 # ---------------- hero ----------------
