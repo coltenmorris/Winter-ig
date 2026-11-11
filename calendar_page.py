@@ -7,6 +7,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+import db
 import flags as flags_mod
 
 from shared import (BARK, DUSK, FERN, MOSS, SAGE, fmt_num, load, private_nav,
@@ -29,10 +30,19 @@ has_views = t["views"].notna().any()
 
 # ---------------- controls ----------------
 c1, c2 = st.columns(2)
-kind = c1.segmented_control("Show", ["Total", "Reels", "Posts"], default="Total", key="kind") or "Total"
+kind = c1.segmented_control("Show", ["Total", "Reels", "Posts", "Stories"], default="Total", key="kind") or "Total"
 span = c2.segmented_control("View", ["3 months", "1 month"], default="3 months", key="span") or "3 months"
-ft = t if kind == "Total" else t[t["kind"] == ("reel" if kind == "Reels" else "post")]
-noun = {"Total": "posts and reels", "Reels": "reels", "Posts": "posts"}[kind]
+if kind == "Stories":
+    _c = db.connect()
+    ft = pd.read_sql_query("SELECT s.*, st.* FROM stories s LEFT JOIN story_stats st ON st.story_id = s.id", _c)
+    _c.close()
+    ft["posted_at"] = (pd.to_datetime(ft["posted_at"], utc=True).dt.tz_convert("America/Los_Angeles").dt.tz_localize(None)
+                       if not ft.empty else pd.Series(dtype="datetime64[ns]"))
+    ft["date"] = ft["posted_at"].dt.date
+    ft["sv"] = ft["views"].fillna(ft["reach"]) if not ft.empty else ft.get("views")
+else:
+    ft = t if kind == "Total" else t[t["kind"] == ("reel" if kind == "Reels" else "post")]
+noun = {"Total": "posts and reels", "Reels": "reels", "Posts": "posts", "Stories": "stories"}[kind]
 
 months = list(pd.period_range(t["posted_at"].min().to_period("M"), pd.Timestamp.today().to_period("M"), freq="M")[::-1])
 with_posts = set(ft["posted_at"].dt.to_period("M"))
@@ -42,6 +52,8 @@ end_month = st.selectbox("Ending month" if span == "3 months" else "Month", mont
 shown = [end_month - i for i in range(3)][::-1] if span == "3 months" else [end_month]
 
 counts = ft.groupby("date").size()
+# Stories come several a day, so they get a wider scale than reels and posts
+LEVELS, LEVEL_LBL = ((1, 3, 6), ("1-2", "3-5", "6+")) if kind == "Stories" else ((1, 2, 3), ("1", "2", "3+"))
 dows = ["M", "T", "W", "T ", "F", "S", "S "]  # trailing spaces keep the labels unique
 today = date.today()
 
@@ -53,7 +65,7 @@ def month_chart(month: pd.Period):
     g["dow"] = [dows[d.weekday()] for d in g["date"]]
     g["week"] = [(d.day - 1 + first.weekday()) // 7 for d in g["date"]]
     g["posts"] = [int(counts.get(d, 0)) for d in g["date"]]
-    g["level"] = g["posts"].clip(upper=3)
+    g["level"] = [sum(c >= m for m in LEVELS) for c in g["posts"]]
     g["label"] = g["posts"].map(lambda x: str(x) if x else "")
     g["key"] = g["date"].astype(str)
     pick = alt.selection_point(fields=["key"], name="day", on="click", clear=False)
@@ -75,8 +87,8 @@ def month_chart(month: pd.Period):
 
 
 st.markdown(f"""<div class="cal-legend">Posted per day:
-  <span><i style="background:#18211C"></i>0</span><span><i style="background:{FERN}"></i>1</span>
-  <span><i style="background:{SAGE}"></i>2</span><span><i style="background:{MOSS}"></i>3+</span></div>""",
+  <span><i style="background:#18211C"></i>0</span><span><i style="background:{FERN}"></i>{LEVEL_LBL[0]}</span>
+  <span><i style="background:{SAGE}"></i>{LEVEL_LBL[1]}</span><span><i style="background:{MOSS}"></i>{LEVEL_LBL[2]}</span></div>""",
             unsafe_allow_html=True)
 cols = st.columns(3 if span == "3 months" else [1, 1, 1])
 picked = None
@@ -105,8 +117,11 @@ if picked:
 st.markdown(f"## {noun.capitalize()} in a range")
 r1, r2 = st.columns([3, 2])
 preset = r1.selectbox("Date range", PRESETS, key="preset")
-sort_opts = (["Newest first", "Oldest first"] + (["Most views", "Highest engagement"] if has_views else [])
+sort_opts = (["Newest first", "Oldest first", "Most views", "Most replies"] if kind == "Stories" else
+             ["Newest first", "Oldest first"] + (["Most views", "Highest engagement"] if has_views else [])
              + ["Most likes", "Most comments"])
+if st.session_state.get("sort") not in sort_opts:
+    st.session_state["sort"] = sort_opts[0]
 sort = r2.selectbox("Sort by", sort_opts, key="sort")
 
 first_shown = date(shown[0].year, shown[0].month, 1)
@@ -129,6 +144,25 @@ else:
     start, end, label = today - timedelta(days=days - 1), today, preset
 
 rt = ft[(ft["date"] >= start) & (ft["date"] <= end)]
+if kind == "Stories":
+    key, asc = {"Newest first": ("posted_at", False), "Oldest first": ("posted_at", True),
+                "Most views": ("sv", False), "Most replies": ("replies", False)}[sort]
+    rt = rt.sort_values(key, ascending=asc, na_position="last")
+    st.markdown(f"""<div class="summary"><span><b>{len(rt)}</b>stories, {html.escape(label)}</span>
+      <span><b>{fmt_num(rt["sv"].sum()) if len(rt) else 0}</b>views</span>
+      <span><b>{fmt_num(rt["sv"].mean()) if len(rt) else 0}</b>views per story</span></div>""", unsafe_allow_html=True)
+    if rt.empty:
+        st.markdown('<p class="lede">No stories in this range. Stories are saved from November 11, 2026 on.</p>',
+                    unsafe_allow_html=True)
+    for _, s in rt.iterrows():
+        img = (f'<img src="{html.escape(s["thumbnail_url"])}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">'
+               if isinstance(s["thumbnail_url"], str) else '<div class="noimg"></div>')
+        st.markdown(f"""<div class="daycard glass sday-card">{img}<div>
+            <div class="when">{"Video story" if s["media_type"] == "VIDEO" else "Photo story"}, {s['posted_at']:%a %b %-d, %Y at %-I:%M %p}</div>
+            <div class="stats"><b>{fmt_num(s['sv'])}</b> {"views" if pd.notna(s['views']) else "reached"} &nbsp; <b>{fmt_num(s['reach'])}</b> reached
+            &nbsp; <b>{fmt_num(s['replies'])}</b> replies &nbsp; <b>{fmt_num(s['exits'])}</b> exits</div></div></div>""",
+                    unsafe_allow_html=True)
+    st.stop()
 key, asc = {
     "Newest first": ("posted_at", False), "Oldest first": ("posted_at", True),
     "Most views": ("views", False), "Highest engagement": ("engagement_rate", False),

@@ -34,11 +34,11 @@
   <h2>Posting calendar</h2>
   <p class="lede">Each day shows how many times you posted. Tap a day to list what you posted, or pick a date range below.</p>
   <div class="calbar">
-    <div class="seg" role="group" aria-label="Show" id="kindseg"><button aria-pressed="true" data-k="all">Total</button><button aria-pressed="false" data-k="reel">Reels</button><button aria-pressed="false" data-k="post">Posts</button></div>
+    <div class="seg" role="group" aria-label="Show" id="kindseg"><button aria-pressed="true" data-k="all">Total</button><button aria-pressed="false" data-k="reel">Reels</button><button aria-pressed="false" data-k="post">Posts</button><button aria-pressed="false" data-k="story">Stories</button></div>
     <div class="seg" role="group" aria-label="View" id="spanseg"><button aria-pressed="true" data-s="3">3 months</button><button aria-pressed="false" data-s="1">1 month</button></div>
     <label class="f mpick"><span id="mlabel">Ending month</span><select id="month"></select></label>
   </div>
-  <div class="legend">Posted per day: <span><i style="background:rgba(36,48,42,.45)"></i>0</span><span><i style="background:#2E4030"></i>1</span><span><i style="background:var(--moss)"></i>2</span><span><i style="background:var(--fern)"></i>3+</span></div>
+  <div class="legend" id="callegend"></div>
   <div class="minis" id="minis"></div>
   <div class="summary" id="msum"></div>
 
@@ -211,8 +211,11 @@ const allMonths = []; {
   for (let m = thisMonth; m >= first; m = shiftMonth(m, -1)) allMonths.push(m);
 }
 let kind = "all", span = 3, selected = null;
-const items = () => kind === "all" ? ALL : ALL.filter(r => (r.kind || "reel") === kind);
-const NOUN = { all: "posts and reels", reel: "reels", post: "posts" };
+// Stories get the same shape as reels so the calendar and range list can treat them alike
+const STORIES = (D.stories || []).map(s => ({ ...s, kind: "story", total: { views: s.views ?? s.reach } }))
+  .sort((a, b) => b.ts - a.ts);
+const items = () => kind === "story" ? STORIES : kind === "all" ? ALL : ALL.filter(r => (r.kind || "reel") === kind);
+const NOUN = { all: "posts and reels", reel: "reels", post: "posts", story: "stories" };
 
 function fillMonths() {
   const has = new Set(items().map(r => ym(r.date))), keep = $("month").value;
@@ -222,7 +225,12 @@ function fillMonths() {
 }
 const shownMonths = () => span === 3 ? [-2, -1, 0].map(n => shiftMonth($("month").value, n)) : [$("month").value];
 
+// Stories come several a day, so they get a wider scale than reels and posts
+const LEVELS = () => kind === "story" ? [[1, "1-2"], [3, "3-5"], [6, "6+"]] : [[1, "1"], [2, "2"], [3, "3+"]];
+const level = c => LEVELS().filter(([min]) => c >= min).length;
 function renderCalendar() {
+  const sw = ["rgba(36,48,42,.45)", "#2E4030", "var(--moss)", "var(--fern)"];
+  $("callegend").innerHTML = "Posted per day: " + [[0, "0"], ...LEVELS()].map(([, l], i) => `<span><i style="background:${sw[i]}"></i>${l}</span>`).join("");
   const byDay = {}; items().forEach(r => byDay[r.date] = (byDay[r.date] || 0) + 1);
   const dows = ["M", "T", "W", "T", "F", "S", "S"].map(d => `<div>${d}</div>`).join("");
   $("minis").innerHTML = shownMonths().map(mk => {
@@ -230,7 +238,7 @@ function renderCalendar() {
     let cells = Array.from({ length: offset }, () => `<span class="mday empty"></span>`);
     for (let d = 1; d <= n; d++) {
       const key = `${mk}-${pad2(d)}`, c = byDay[key] || 0;
-      cells.push(`<button class="mday l${Math.min(c, 3)}${key > todayKey ? " future" : ""}" data-day="${key}" aria-pressed="${key === selected}"
+      cells.push(`<button class="mday l${level(c)}${key > todayKey ? " future" : ""}" data-day="${key}" aria-pressed="${key === selected}"
         aria-label="${key}, ${c} posted" title="${d}: ${c} posted">${c || ""}</button>`);
     }
     return `<div class="mini glass"><div class="mt">${monthName(mk)}</div><div class="mg dows">${dows}</div><div class="mg">${cells.join("")}</div></div>`;
@@ -243,7 +251,13 @@ function renderCalendar() {
 // ---------- range + sort ----------
 const SORTS = [["new", "Newest first"], ["old", "Oldest first"]]
   .concat(HAS_VIEWS ? [["views", "Most views"], ["eng", "Highest engagement"]] : [], [["likes", "Most likes"], ["comments", "Most comments"]]);
-$("sort").innerHTML = SORTS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+const STORY_SORTS = [["new", "Newest first"], ["old", "Oldest first"], ["views", "Most views"], ["replies", "Most replies"]];
+function fillSorts() {
+  const opts = kind === "story" ? STORY_SORTS : SORTS, keep = $("sort").value;
+  $("sort").innerHTML = opts.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+  if (opts.some(([k]) => k === keep)) $("sort").value = keep;
+}
+fillSorts();
 const minDate = ALL.length ? ALL[ALL.length - 1].date : todayKey;
 $("from").min = $("to").min = minDate; $("from").max = $("to").max = todayKey;
 $("from").value = minDate; $("to").value = todayKey;
@@ -263,12 +277,20 @@ function renderRange() {
     label = from === to ? nice(from) : `${nice(from)} to ${nice(to)}`; }
   else { from = addDays(todayKey, 1 - Number(p)); to = todayKey; label = `last ${p} days`; }
   const get = { new: r => -dt(r.posted), old: r => +dt(r.posted), views: r => -(r.total.views ?? -1), eng: r => -(r.total.engagement ?? -1),
-    likes: r => -(r.total.likes ?? -1), comments: r => -(r.total.comments ?? -1) }[$("sort").value];
+    likes: r => -(r.total.likes ?? -1), comments: r => -(r.total.comments ?? -1), replies: r => -(r.replies ?? -1) }[$("sort").value];
   const list = items().filter(r => r.date >= from && r.date <= to).sort((a, b) => get(a) - get(b));
   const tot = list.map(r => val(r)).filter(v => v != null).reduce((x, y) => x + y, 0);
-  $("rangeh").textContent = { all: "Posts and reels", reel: "Reels", post: "Posts" }[kind] + " in a range";
+  $("rangeh").textContent = { all: "Posts and reels", reel: "Reels", post: "Posts", story: "Stories" }[kind] + " in a range";
   $("rsum").innerHTML = `<span><b>${list.length}</b>${NOUN[kind]}, ${esc(label)}</span><span><b>${fmt(tot)}</b>${MAIN_LABEL}</span>
     <span><b>${list.length ? fmt(tot / list.length) : 0}</b>${MAIN_LABEL} each on average</span>`;
+  if (kind === "story") {
+    $("rlist").innerHTML = list.length ? list.map(s => `<div class="daycard">
+      <div class="thumb sthumb">${s.thumb ? `<img src="${esc(s.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</div><div>
+      <div class="when">${s.type === "VIDEO" ? "Video story" : "Photo story"}, ${fmtDate(s.posted, { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at ${fmtTime(s.posted)}</div>
+      <div class="st"><b>${fmt(s.total.views)}</b> ${s.views != null ? "views" : "reached"} &nbsp; <b>${fmt(s.reach)}</b> reached &nbsp; <b>${fmt(s.replies)}</b> replies &nbsp; <b>${fmt(s.exits)}</b> exits</div></div></div>`).join("")
+      : `<p class="lede">No stories in this range. Stories are saved from November 11, 2026 on.</p>`;
+    return;
+  }
   $("rlist").innerHTML = list.length ? list.map(r => `
     <button class="daycard" onclick="openReel('${r.id}')">${thumb(r)}<div>
       <div class="when">${what(r)}, ${fmtDate(r.posted, { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at ${fmtTime(r.posted)}${r.trial ? ", trial reel" : ""}${r.ad ? (r.brand ? ", ad for " + esc(r.brand) : ", ad") : ""}</div>
@@ -284,7 +306,7 @@ $("minis").addEventListener("click", e => {
   $("rangeh").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 });
 $("kindseg").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (!b) return;
-  kind = b.dataset.k; $("kindseg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); fillMonths(); rerender(); });
+  kind = b.dataset.k; $("kindseg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); fillSorts(); fillMonths(); rerender(); });
 $("spanseg").addEventListener("click", e => { const b = e.target.closest("button[data-s]"); if (!b) return;
   span = Number(b.dataset.s); $("spanseg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
   $("month").value = ""; fillMonths(); rerender(); });
