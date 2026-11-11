@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Media Kit</title>
 <meta name="description" content="Instagram creator media kit with audience and performance stats.">
-<link rel="stylesheet" href="style.css?v=202611110543">
+<link rel="stylesheet" href="style.css?v=202611110547">
 </head>
 <body>
 <div class="wrap">
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
   <main id="app"></main>
 </div>
-<script src="data.js?v=202611110543"></script>
+<script src="data.js?v=202611110547"></script>
 <script>
 if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -26,7 +26,7 @@ if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   window.__EMPTY = true;
 }
 </script>
-<script src="common.js?v=202611110543"></script>
+<script src="common.js?v=202611110547"></script>
 <script>
 if (!window.__EMPTY) {
 mark("kit");
@@ -157,10 +157,6 @@ if (ADS.length) {
     <div class="t">${esc(r.title)}, ${fmtDate(r.posted, { month: "short", day: "numeric", year: "numeric" })}</div></div></button>`).join("")}</div>`;
 }
 
-// Growth
-if (D.followers.length > 1) {
-  html += `<h2>Growth</h2><p class="lede">Follower count over time.</p><div class="glass panel">${lineChart(D.followers.map(f => [Date.parse(f.date), f.n]))}</div>`;
-}
 html += `<div class="foot">Numbers come directly from the Instagram API and update daily. Last updated ${esc(D.updated)}.</div>`;
 document.getElementById("app").innerHTML = html;
 document.getElementById("topseg").addEventListener("click", e => {

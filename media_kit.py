@@ -2,7 +2,6 @@
 import html
 from datetime import datetime
 
-import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -31,10 +30,6 @@ pic = profile.get("profile_picture_url")
 # ---------------- headline numbers ----------------
 now = acct["captured_date"].max()
 followers = int(acct["followers"].iloc[-1])
-past = acct[acct["captured_date"] <= now - pd.Timedelta(days=30)]
-base = int(past["followers"].iloc[-1]) if not past.empty else int(acct["followers"].iloc[0])
-gained = followers - base
-growth_pct = gained / base if base else 0
 
 recent = t[(t["age_days"] <= 90) & (t["age_days"] >= 3)]
 recent_label = "last 90 days"
@@ -102,8 +97,7 @@ board_html = f"""<div class="board glass{' five' if v30_label.startswith('Views 
      else f'<div><div class="v">{len(t)}</div><div class="k">Reels published</div></div>'}
   <div><div class="v">{fmt_num(views_30)}</div><div class="k">{v30_label}</div></div>
   {f'<div><div class="v">{fmt_num(t[MAIN].sum())}</div><div class="k">Total {MAIN_L} across reels</div></div>' if v30_label.startswith("Views in") else ""}
-  {f'<div><div class="v">+{fmt_num(gained)}</div><div class="k">New followers in 30 days</div><div class="d">{growth_pct:+.1%} growth</div></div>'
-     if len(acct) > 1 else f'<div><div class="v">{fmt_num(best_reel)}</div><div class="k">{MAIN_L.capitalize()} on top reel</div></div>'}
+  <div><div class="v">{fmt_num(best_reel)}</div><div class="k">{MAIN_L.capitalize()} on top reel</div></div>
 </div>
 """
 live_on = st.session_state.get("live_kit", False)
@@ -315,48 +309,6 @@ if not ads.empty:
   <div class="t">{esc(r['title'])}, {r['posted_at']:%b %-d, %Y}</div></div>
 </a>""")
     st.markdown('<div class="reels" style="margin-top:22px">' + "".join(acards) + "</div>", unsafe_allow_html=True)
-
-# ---------------- growth (hidden until there's a trend to show) ----------------
-fol_pts = acct[["captured_date", "followers"]].dropna()
-show_fol = fol_pts["captured_date"].nunique() >= 2
-wk = pd.DataFrame()
-if daily["views"].notna().any():
-    wk = daily.set_index("captured_date")["views"].resample("W-SUN").sum().reset_index()
-    wk = wk[(wk["views"] > 0) & (wk["captured_date"] <= daily["captured_date"].max())].tail(10)
-show_wk = len(wk) >= 2
-if show_fol or show_wk:
-    st.markdown("## Growth")
-    st.markdown('<p class="lede">' + " and ".join(x for x, ok in (("Follower count", show_fol), ("weekly views", show_wk)) if ok)
-                + ' over time.</p>', unsafe_allow_html=True)
-    cols = st.columns(2, gap="large") if (show_fol and show_wk) else [st.container()]
-    ci = 0
-    if show_fol:
-        with cols[ci]:
-            st.markdown("### Followers")
-            lo = fol_pts["followers"].min() * 0.97
-            chart = alt.Chart(fol_pts).mark_area(
-                line={"color": MOSS, "strokeWidth": 2.5},
-                color=alt.Gradient(gradient="linear", x1=1, x2=1, y1=1, y2=0,
-                                   stops=[alt.GradientStop(color="rgba(143,175,120,0)", offset=0),
-                                          alt.GradientStop(color="rgba(143,175,120,.22)", offset=1)]),
-            ).encode(
-                x=alt.X("captured_date:T", title=None, axis=alt.Axis(format="%b %-d", tickCount=5)),
-                y=alt.Y("followers:Q", title=None, scale=alt.Scale(domain=[lo, fol_pts["followers"].max()]),
-                        axis=alt.Axis(format="~s", tickCount=4)),
-                tooltip=[alt.Tooltip("captured_date:T", title="Date"), alt.Tooltip("followers:Q", format=",")],
-            ).properties(height=240)
-            st.altair_chart(chart, width="stretch")
-        ci = min(ci + 1, len(cols) - 1)
-    if show_wk:
-        with cols[ci]:
-            st.markdown("### Weekly views")
-            chart = alt.Chart(wk).mark_bar(color=SAGE, size=26).encode(
-                x=alt.X("captured_date:T", title=None, axis=alt.Axis(format="%b %-d", tickCount=5),
-                        scale=alt.Scale(padding=20)),
-                y=alt.Y("views:Q", title=None, axis=alt.Axis(format="~s", tickCount=4)),
-                tooltip=[alt.Tooltip("captured_date:T", title="Week ending"), alt.Tooltip("views:Q", format=",")],
-            ).properties(height=240)
-            st.altair_chart(chart, width="stretch")
 
 updated = snaps["captured_date"].max()
 st.markdown(f'<div class="foot">Numbers come directly from the Instagram API and update daily. '
