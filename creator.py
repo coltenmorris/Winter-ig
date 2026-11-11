@@ -110,20 +110,20 @@ st.markdown('<div class="glass">' + "".join(rows) + "</div>", unsafe_allow_html=
 
 # ---------------- when to post ----------------
 st.markdown("## When to post")
-st.markdown('<p class="lede">Median views by the day and time you posted (Eastern). '
+st.markdown('<p class="lede">Median views by the day and time you posted (Pacific time). '
             'Darker cells did better. Empty cells mean you haven’t posted then yet.</p>', unsafe_allow_html=True)
-bucket = pd.cut(settled["posted_at"].dt.hour, [-1, 10, 14, 18, 24],
-                labels=["Morning", "Midday", "Afternoon", "Evening"])
-when = (settled.assign(day=settled["posted_at"].dt.day_name().str[:3], slot=bucket)
+SLOTS = ["Late night", "Morning", "Midday", "Afternoon", "Evening"]  # 12–5a, 5–11a, 11a–3p, 3–7p, 7p–12a
+bucket = pd.cut(settled["posted_at"].dt.hour, [-1, 4, 10, 14, 18, 23], labels=SLOTS)
+when = (settled.assign(day=settled["posted_at"].dt.day_name().str[:3], slot=bucket.astype(str))
         .groupby(["day", "slot"], observed=True)["views"].agg(["median", "count"]).reset_index())
 days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 heat = alt.Chart(when).mark_rect(stroke="#0E1411", strokeWidth=2).encode(
     x=alt.X("day:N", sort=days, title=None, scale=alt.Scale(domain=days), axis=alt.Axis(labelAngle=0)),
-    y=alt.Y("slot:N", sort=["Morning", "Midday", "Afternoon", "Evening"], title=None),
+    y=alt.Y("slot:N", sort=SLOTS, title=None, scale=alt.Scale(domain=SLOTS)),
     color=alt.Color("median:Q", scale=alt.Scale(range=[FERN, MOSS]), legend=None),
     tooltip=[alt.Tooltip("day:N", title="Day"), alt.Tooltip("slot:N", title="Time"),
              alt.Tooltip("median:Q", title="Median views", format=","), alt.Tooltip("count:Q", title="Reels")],
-).properties(height=220)
+).properties(height=270)
 st.altair_chart(heat, width="stretch")
 
 # ---------------- what works ----------------

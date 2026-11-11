@@ -9,7 +9,7 @@ import streamlit as st
 import db
 import flags as flags_mod
 
-LOCAL_TZ = "America/New_York"
+LOCAL_TZ = "America/Los_Angeles"  # all dates and times on the dashboard are Pacific
 
 # ---------------- palette (overgrown: forest dark, moss, mist, stone, one lamp accent) ----------------
 ABYSS = "#0E1411"    # page

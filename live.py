@@ -83,7 +83,7 @@ def live_followers(synced_followers: int | None, hero: bool = False):
               <div class="l"><span class="dot" aria-hidden="true"></span>live followers on Instagram</div></div>""",
                         unsafe_allow_html=True)
             return
-        now = datetime.now(ZoneInfo("America/New_York")).strftime("%-I:%M:%S %p")
+        now = datetime.now(ZoneInfo("America/Los_Angeles")).strftime("%-I:%M:%S %p")
         bits = []
         if n != start:
             d = n - start
@@ -95,6 +95,6 @@ def live_followers(synced_followers: int | None, hero: bool = False):
           <div class="live-top"><span class="dot" aria-hidden="true"></span>Live followers</div>
           <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n, phase)}</div>
           <div class="live-sub">{" &nbsp;·&nbsp; ".join(bits) if bits else "No change since you opened this page"}<br>
-          Updated {now}, refreshes every {REFRESH_SECONDS} seconds</div></div>""", unsafe_allow_html=True)
+          Updated {now} PT, refreshes every {REFRESH_SECONDS} seconds</div></div>""", unsafe_allow_html=True)
 
     ticker()

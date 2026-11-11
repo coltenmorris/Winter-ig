@@ -240,7 +240,8 @@ fillMonths(); rerender();
 
 // ---------- when to post ----------
 const settled = R.filter(r => (Date.now() - dt(r.posted)) / 864e5 >= 3 && val(r) != null);
-const slots = [["Morning", 0, 11], ["Midday", 11, 15], ["Afternoon", 15, 19], ["Evening", 19, 24]];
+// Pacific time slots: 12–5a, 5–11a, 11a–3p, 3–7p, 7p–12a
+const slots = [["Late night", 0, 5], ["Morning", 5, 11], ["Midday", 11, 15], ["Afternoon", 15, 19], ["Evening", 19, 24]];
 const dows = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const med = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : null; };
 const cellsWk = {}; settled.forEach(r => {
@@ -248,13 +249,13 @@ const cellsWk = {}; settled.forEach(r => {
   const si = slots.findIndex(([, a, b]) => h >= a && h < b); (cellsWk[`${di}-${si}`] ||= []).push(val(r));
 });
 const meds = Object.values(cellsWk).map(med), hi = Math.max(...meds, 1), lo = Math.min(...meds, 0);
-$("wklede").textContent = `Median ${MAIN_LABEL} by when you posted (Eastern time). Brighter did better; blank means you haven't posted then.`;
+$("wklede").textContent = `Median ${MAIN_LABEL} by when you posted (Pacific time). Brighter did better; blank means you haven't posted then.`;
 $("wk").innerHTML = `<div class="wk"><span></span>${dows.map(d => `<span class="h">${d}</span>`).join("")}${slots.map(([name], si) =>
   `<span>${name}</span>` + dows.map((_, di) => {
     const v = cellsWk[`${di}-${si}`]; if (!v) return `<span class="c"></span>`;
     const m = med(v), t = (m - lo) / ((hi - lo) || 1);
     const bg = `color-mix(in srgb, #8FAF78 ${Math.round(10 + t * 90)}%, #1E2923)`;
-    return `<span class="c" style="background:${bg};color:${t > .6 ? "#0E1411" : "var(--mist)"}" title="${v.length} reels">${fmt(m)}</span>`;
+    return `<span class="c" style="background:${bg};color:${t > .6 ? "#0E1411" : "var(--mist)"}" title="${v.length} ${v.length === 1 ? "reel" : "reels"}">${fmt(m)}</span>`;
   }).join("")).join("")}</div>`;
 
 // ---------- hashtags ----------

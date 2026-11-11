@@ -17,7 +17,7 @@ import flags as flags_mod
 
 ROOT = Path(__file__).parent
 SRC, OUT = ROOT / "site", ROOT / "docs"
-TZ = ZoneInfo("America/New_York")
+TZ = ZoneInfo("America/Los_Angeles")  # Pacific time throughout
 METRICS = ["views", "reach", "likes", "comments", "shares", "saved", "total_interactions",
            "avg_watch_ms", "skip_rate"]
 
