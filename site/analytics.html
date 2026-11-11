@@ -86,13 +86,14 @@ if (!HAS_VIEWS) $("warn").innerHTML = `<div class="glass warn">Instagram isn't r
 // KPIs
 const fol = D.followers.length ? D.followers[D.followers.length - 1].n : null;
 const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
-const mains = R.map(r => val(r)).filter(v => v != null);
-const engs = R.map(r => r.total && r.total.engagement).filter(v => v != null);
-const watch = R.map(r => r.total && r.total.watch_s).filter(v => v != null);
+const HP = headlinePool();  // same reels as the media kit's averages
+const mains = HP.reels.map(r => val(r)).filter(v => v != null);
+const engs = HP.reels.map(r => r.total && r.total.engagement).filter(v => v != null);
+const watch = HP.reels.map(r => r.total && r.total.watch_s).filter(v => v != null);
 $("kpis").innerHTML = `<div><div class="v">${fmt(fol)}</div><div class="k">Followers</div></div>
-  <div><div class="v">${fmt(avg(mains))}</div><div class="k">Avg ${MAIN_LABEL} per reel</div></div>
-  <div><div class="v">${engs.length ? pct(avg(engs)) : fmt(avg(R.map(r => r.total.comments).filter(v => v != null)))}</div><div class="k">${engs.length ? "Avg engagement" : "Avg comments"}</div></div>
-  <div><div class="v">${watch.length ? avg(watch).toFixed(1) + "s" : R.length}</div><div class="k">${watch.length ? "Avg watch time" : "Reels tracked"}</div></div>`;
+  <div><div class="v">${fmt(avg(mains))}</div><div class="k">Avg ${MAIN_LABEL} per reel, ${HP.label}</div></div>
+  <div><div class="v">${engs.length ? pct(avg(engs)) : fmt(avg(R.map(r => r.total.comments).filter(v => v != null)))}</div><div class="k">${engs.length ? "Avg engagement" : "Avg comments"}, ${HP.label}</div></div>
+  <div><div class="v">${watch.length ? avg(watch).toFixed(1) + "s" : R.length}</div><div class="k">${watch.length ? "Avg watch time, " + HP.label : "Reels tracked"}</div></div>`;
 
 // ---------- period summary ----------
 const p2 = n => String(n).padStart(2, "0");

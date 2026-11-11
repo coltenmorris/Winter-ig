@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Media Kit</title>
 <meta name="description" content="Instagram creator media kit with audience and performance stats.">
-<link rel="stylesheet" href="style.css?v=202611110540">
+<link rel="stylesheet" href="style.css?v=202611110543">
 </head>
 <body>
 <div class="wrap">
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
   <main id="app"></main>
 </div>
-<script src="data.js?v=202611110540"></script>
+<script src="data.js?v=202611110543"></script>
 <script>
 if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -26,15 +26,14 @@ if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   window.__EMPTY = true;
 }
 </script>
-<script src="common.js?v=202611110540"></script>
+<script src="common.js?v=202611110543"></script>
 <script>
 if (!window.__EMPTY) {
 mark("kit");
 const P = D.profile, R = D.reels.filter(r => r.kind !== "post" && !r.ad), ADS = D.reels.filter(r => r.ad);
 const now = Date.now(), DAY = 864e5;
 const followers = D.followers.length ? D.followers[D.followers.length - 1].n : null;
-const recent = R.filter(r => (now - dt(r.posted)) / DAY <= 90 && (now - dt(r.posted)) / DAY >= 3);
-const pool = recent.length >= 3 ? recent : R;
+const HP = headlinePool(), pool = HP.reels;
 const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
 const mains = pool.map(r => val(r)).filter(v => v != null);
 const engs = pool.map(r => r.total && r.total.engagement).filter(v => v != null);
@@ -68,8 +67,8 @@ let html = `
 </section>
 <div class="script">media kit</div>
 <section class="board glass${D.views_30d != null ? " five" : ""}">
-  <div><div class="v">${fmt(avg(mains))}</div><div class="k">Average ${MAIN_LABEL} per reel</div>${lastMonth(avg(mains), prevMain, fmt)}</div>
-  ${engs.length ? `<div><div class="v">${pct(avg(engs))}</div><div class="k">Engagement rate</div>${lastMonth(avg(engs), prevEng, pct)}</div>`
+  <div><div class="v">${fmt(avg(mains))}</div><div class="k">Average ${MAIN_LABEL} per reel, ${HP.label}</div>${lastMonth(avg(mains), prevMain, fmt)}</div>
+  ${engs.length ? `<div><div class="v">${pct(avg(engs))}</div><div class="k">Engagement rate, ${HP.label}</div>${lastMonth(avg(engs), prevEng, pct)}</div>`
                : `<div><div class="v">${R.length}</div><div class="k">Reels published</div></div>`}
   ${D.views_30d != null ? `<div><div class="v">${fmt(D.views_30d)}</div><div class="k">Views in the last 30 days</div></div>` : ""}
   <div><div class="v">${fmt(total)}</div><div class="k">Total ${MAIN_LABEL} across reels</div></div>

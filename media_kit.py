@@ -37,8 +37,9 @@ gained = followers - base
 growth_pct = gained / base if base else 0
 
 recent = t[(t["age_days"] <= 90) & (t["age_days"] >= 3)]
+recent_label = "last 90 days"
 if len(recent) < 3:
-    recent = t
+    recent, recent_label = t, "all time"
 HAS_VIEWS = t["views"].notna().any()
 MAIN, MAIN_L = ("views", "views") if HAS_VIEWS else ("likes", "likes")
 avg_views = recent[MAIN].mean()
@@ -96,8 +97,8 @@ id_html = f"""  <div class="id glass">
   </div>
 """
 board_html = f"""<div class="board glass{' five' if v30_label.startswith('Views in') else ''}">
-  <div><div class="v">{fmt_num(avg_views)}</div><div class="k">Average {MAIN_L} per reel</div>{last_month(avg_views, prev_avg, fmt_num)}</div>
-  {f'<div><div class="v">{eng:.1%}</div><div class="k">Engagement rate</div>{last_month(eng, prev_eng, lambda x: f"{x:.1%}")}</div>' if eng is not None and eng == eng
+  <div><div class="v">{fmt_num(avg_views)}</div><div class="k">Average {MAIN_L} per reel, {recent_label}</div>{last_month(avg_views, prev_avg, fmt_num)}</div>
+  {f'<div><div class="v">{eng:.1%}</div><div class="k">Engagement rate, {recent_label}</div>{last_month(eng, prev_eng, lambda x: f"{x:.1%}")}</div>' if eng is not None and eng == eng
      else f'<div><div class="v">{len(t)}</div><div class="k">Reels published</div></div>'}
   <div><div class="v">{fmt_num(views_30)}</div><div class="k">{v30_label}</div></div>
   {f'<div><div class="v">{fmt_num(t[MAIN].sum())}</div><div class="k">Total {MAIN_L} across reels</div></div>' if v30_label.startswith("Views in") else ""}

@@ -18,6 +18,15 @@ const fmtTime = s => dt(s).toLocaleTimeString("en-US", { hour: "numeric", minute
 const HAS_VIEWS = D.reels.some(r => r.total && r.total.views != null);
 const MAIN = HAS_VIEWS ? "views" : "likes";
 const MAIN_LABEL = HAS_VIEWS ? "views" : "likes";
+// Reels behind the headline averages, identical on both pages: organic reels (no posts, no tagged ads)
+// posted in the last 90 days, skipping ones under 3 days old that are still collecting views.
+// Falls back to all organic reels when fewer than 3 qualify.
+function headlinePool() {
+  const now = Date.now(), DAY = 864e5, age = r => (now - new Date(r.posted)) / DAY;
+  const organic = D.reels.filter(r => r.kind !== "post" && !r.ad);
+  const recent = organic.filter(r => age(r) <= 90 && age(r) >= 3);
+  return recent.length >= 3 ? { reels: recent, label: "last 90 days" } : { reels: organic, label: "all time" };
+}
 const val = (r, k = MAIN) => (r.total && r.total[k] != null) ? r.total[k] : null;
 
 const thumb = (r, badge = "") =>
