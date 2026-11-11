@@ -126,31 +126,59 @@ def bars(df: pd.DataFrame, label_map=None, top=6, by_value=True) -> str:
     return f'<div class="bars{" mom" if pshare is not None else ""}">' + "".join(rows) + "</div>"
 
 
-# Prefer viewer demographics (accounts that saw your content this month); fall back to followers.
-audience = "followers"
-if not demo.empty:
-    viewers = demo[demo["breakdown"].str.startswith("viewers:")]
-    if not viewers.empty:
-        demo = viewers.assign(breakdown=viewers["breakdown"].str.split(":").str[1])
-        audience = "viewers"
+# Audience breakdowns: viewers this month (accounts reached) or followers, picked with a switch.
+_all_demo = demo
+_has_viewers = not demo.empty and demo["breakdown"].str.startswith("viewers:").any()
+_has_followers = not demo.empty and (~demo["breakdown"].str.contains(":")).any()
+
+
+class CountryNames(dict):
+    """Two-letter country code -> full name (falls back to the code)."""
+    def get(self, code, default=None):
+        try:
+            import pycountry
+            c = pycountry.countries.get(alpha_2=code)
+            return getattr(c, "common_name", None) or c.name if c else (default or code)
+        except Exception:
+            return default or code
+
+
+def full_totals(d: pd.DataFrame) -> dict:
+    """Instagram only lists the top 45 cities/countries, so shares use the whole audience
+    (the gender or age breakdown covers everyone) rather than the sum of the listed rows."""
+    sums = d.groupby("breakdown")["value"].sum().to_dict()
+    whole = sums.get("gender") or sums.get("age")
+    return {b: (whole if whole and b in ("city", "country") else s) for b, s in sums.items()}
+
+
+prev_month = (pd.Timestamp.today().to_period("M") - 1).strftime("%Y-%m")
+if _has_viewers or _has_followers:
+    st.markdown("## Who's watching")
+    options = (["Viewers this month"] if _has_viewers else []) + (["Followers"] if _has_followers else [])
+    pick = st.segmented_control("Audience", options, default=options[0], key="aud",
+                                label_visibility="collapsed") or options[0]
+    audience = "viewers" if pick.startswith("Viewers") else "followers"
+    if audience == "viewers":
+        v = _all_demo[_all_demo["breakdown"].str.startswith("viewers:")]
+        demo = v.assign(breakdown=v["breakdown"].str.split(":").str[1])
         demo_lede = "Accounts that viewed your posts and reels this month, as reported by Instagram."
     else:
-        demo = demo[~demo["breakdown"].str.contains(":")]
-        demo_lede = "Follower breakdown reported by Instagram."
-
-# Last month's breakdown (saved by the daily sync) for month-over-month change, as shares of each total.
-prev_month = (pd.Timestamp.today().to_period("M") - 1).strftime("%Y-%m")
-_conn = db.connect()
-_prev = pd.read_sql("SELECT breakdown, label, value FROM demographics_monthly WHERE month=? AND audience=?",
-                    _conn, params=(prev_month, audience))
-_conn.close()
-prev_share = {b: (g.set_index("label")["value"] / g["value"].sum()).to_dict() for b, g in _prev.groupby("breakdown")}
-if not demo.empty:
+        demo = _all_demo[~_all_demo["breakdown"].str.contains(":")]
+        demo_lede = "Your followers, as reported by Instagram."
+    demo_lede += " City and country shares are out of the whole audience; Instagram lists the top 45 of each."
+    _conn = db.connect()
+    _prev = pd.read_sql("SELECT breakdown, label, value FROM demographics_monthly WHERE month=? AND audience=?",
+                        _conn, params=(prev_month, audience))
+    _conn.close()
+    _ptot = full_totals(_prev) if not _prev.empty else {}
+    prev_share = {b: (g.set_index("label")["value"] / _ptot[b]).to_dict() for b, g in _prev.groupby("breakdown")}
     demo_lede += (f" Changes compare with {pd.Period(prev_month).strftime('%B')}." if prev_share else
                   " Month-over-month changes appear once last month's numbers are saved.")
+else:
+    demo = demo.iloc[0:0]
+    prev_share = {}
 if not demo.empty:
-    demo_totals = demo.groupby("breakdown")["value"].sum()
-    st.markdown("## Who's watching")
+    demo_totals = full_totals(demo)
     st.markdown(f'<p class="lede">{demo_lede}</p>', unsafe_allow_html=True)
     c1, c2 = st.columns(2, gap="large")
     with c1:
@@ -173,11 +201,7 @@ if not demo.empty:
             st.markdown("### Top cities")
             st.markdown('<div class="glass panel">' + bars(demo[demo["breakdown"] == "city"]) + "</div>", unsafe_allow_html=True)
         if "country" in demo_totals:
-            names = {"US": "United States", "CA": "Canada", "GB": "United Kingdom", "AU": "Australia",
-                     "MX": "Mexico", "KE": "Kenya", "DE": "Germany", "FR": "France", "BR": "Brazil",
-                     "IN": "India", "JP": "Japan", "ES": "Spain", "IT": "Italy", "NZ": "New Zealand",
-                     "NG": "Nigeria", "BE": "Belgium", "NL": "Netherlands", "IE": "Ireland", "PH": "Philippines",
-                     "ZA": "South Africa", "NO": "Norway", "SE": "Sweden", "TT": "Trinidad and Tobago", "JM": "Jamaica"}
+            names = CountryNames()
             st.markdown("### Top countries")
             st.markdown('<div class="glass panel">' + bars(demo[demo["breakdown"] == "country"], names, top=5) + "</div>", unsafe_allow_html=True)
 

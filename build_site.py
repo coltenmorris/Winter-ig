@@ -87,24 +87,28 @@ def build():
     all_demo = {}
     for r in conn.execute("SELECT breakdown, label, value FROM demographics"):
         all_demo.setdefault(r["breakdown"], {})[r["label"]] = r["value"]
-    # Viewer demographics (accounts reached this month) when available, otherwise followers.
-    viewers = {k.split(":", 1)[1]: v for k, v in all_demo.items() if k.startswith("viewers:")}
-    demo = viewers or {k: v for k, v in all_demo.items() if ":" not in k}
-    demo_source = "viewers" if viewers else "followers"
-    # Last month's breakdown for the same audience, for month-over-month change.
+    # Viewers (accounts reached this month) and followers, each with last month's breakdown.
+    audiences = {
+        "viewers": {k.split(":", 1)[1]: v for k, v in all_demo.items() if k.startswith("viewers:")},
+        "followers": {k: v for k, v in all_demo.items() if ":" not in k},
+    }
+    audiences = {k: v for k, v in audiences.items() if v}
+    demo_source = "viewers" if "viewers" in audiences else "followers"
+    demo = audiences.get(demo_source, {})
     today_d = datetime.now(TZ).date()
     prev_month = (today_d.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
-    demo_prev = {}
-    for r in conn.execute("SELECT breakdown, label, value FROM demographics_monthly WHERE month=? AND audience=?",
-                          (prev_month, demo_source)):
-        demo_prev.setdefault(r["breakdown"], {})[r["label"]] = r["value"]
+    audiences_prev = {}
+    for r in conn.execute("SELECT audience, breakdown, label, value FROM demographics_monthly WHERE month=?", (prev_month,)):
+        audiences_prev.setdefault(r["audience"], {}).setdefault(r["breakdown"], {})[r["label"]] = r["value"]
+    demo_prev = audiences_prev.get(demo_source, {})
     prev_month_name = datetime.strptime(prev_month + "-01", "%Y-%m-%d").strftime("%B")
 
     data = {
         "profile": {"name": setting("profile_name"), "username": setting("profile_username"),
                     "bio": setting("profile_biography"), "pic": setting("profile_profile_picture_url")},
         "followers": followers, "daily": daily, "demographics": demo, "demo_source": demo_source,
-        "demo_prev": demo_prev, "demo_prev_month": prev_month_name, "reels": reels,
+        "demo_prev": demo_prev, "demo_prev_month": prev_month_name,
+        "audiences": audiences, "audiences_prev": audiences_prev, "reels": reels,
         "contact": os.getenv("CONTACT_EMAIL") or None, "tagline": os.getenv("CREATOR_TAGLINE") or None,
         "updated": datetime.now(timezone.utc).astimezone(TZ).strftime("%B %-d, %Y"),
     }
