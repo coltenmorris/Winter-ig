@@ -102,7 +102,8 @@ def video_table(media: pd.DataFrame, snaps: pd.DataFrame, window_days: int = 7) 
     t["title"] = t["title"].where(t["title"] != "", "Untitled")
     t["kind"] = [db.media_kind(a, b) for a, b in zip(t["media_type"], t["product_type"])]
     t["hashtags"] = t["caption"].fillna("").str.findall(r"#(\w+)").apply(lambda x: [h.lower() for h in x])
-    t["age_days"] = (pd.Timestamp.now() - t["posted_at"]).dt.days
+    # Age in fractional days, both sides in Pacific time (matches the GitHub site exactly)
+    t["age_days"] = (pd.Timestamp.now(tz=LOCAL_TZ).tz_localize(None) - t["posted_at"]).dt.total_seconds() / 86400
     return t
 
 

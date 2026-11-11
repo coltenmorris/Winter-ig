@@ -72,7 +72,7 @@ def build():
             "id": m["id"], "caption": caption,
             "title": " ".join(w for w in caption.split("\n")[0].split() if not w.startswith("#"))[:70] or "Untitled",
             "tags": sorted({w[1:].lower().strip(".,!?") for w in caption.split() if w.startswith("#") and len(w) > 1}),
-            "posted": posted.strftime("%Y-%m-%dT%H:%M"), "date": posted.strftime("%Y-%m-%d"),
+            "posted": posted.strftime("%Y-%m-%dT%H:%M"), "ts": int(posted.timestamp() * 1000), "date": posted.strftime("%Y-%m-%d"),
             "thumb": m["thumbnail_url"], "link": m["permalink"], "trial": bool(m["is_trial"]) or m["id"] in fl["trial"],
             "ad": m["id"] in fl["ads"], "brand": fl["ads"].get(m["id"], {}).get("brand", ""),
             "kind": db.media_kind(m["media_type"], m["product_type"]), "media_type": m["media_type"],

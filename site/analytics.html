@@ -243,7 +243,7 @@ $("month").addEventListener("change", rerender);
 fillMonths(); rerender();
 
 // ---------- when to post ----------
-const settled = R.filter(r => (Date.now() - dt(r.posted)) / 864e5 >= 3 && val(r) != null);
+const settled = R.filter(r => ageDays(r) >= 3 && val(r) != null);
 // Pacific time slots: 12–5a, 5–11a, 11a–3p, 3–7p, 7p–12a
 const slots = [["Late night", 0, 5], ["Morning", 5, 11], ["Midday", 11, 15], ["Afternoon", 15, 19], ["Evening", 19, 24]];
 const dows = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

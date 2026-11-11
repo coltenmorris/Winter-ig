@@ -22,11 +22,13 @@ const MAIN_LABEL = HAS_VIEWS ? "views" : "likes";
 // posted in the last 90 days, skipping ones under 3 days old that are still collecting views.
 // Falls back to all organic reels when fewer than 3 qualify.
 function headlinePool() {
-  const now = Date.now(), DAY = 864e5, age = r => (now - new Date(r.posted)) / DAY;
+  const age = ageDays;
   const organic = D.reels.filter(r => r.kind !== "post" && !r.ad);
   const recent = organic.filter(r => age(r) <= 90 && age(r) >= 3);
   return recent.length >= 3 ? { reels: recent, label: "last 90 days" } : { reels: organic, label: "all time" };
 }
+// Age in days from the real posting moment, independent of the viewer's time zone.
+const ageDays = r => (Date.now() - (r.ts ?? Date.parse(r.posted))) / 864e5;
 const val = (r, k = MAIN) => (r.total && r.total[k] != null) ? r.total[k] : null;
 
 const thumb = (r, badge = "") =>

@@ -41,7 +41,7 @@ const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
 const mains = pool.map(r => val(r)).filter(v => v != null);
 const engs = pool.map(r => r.total && r.total.engagement).filter(v => v != null);
 // The same figures as they stood a month ago: reels posted 30+ days ago, same window rules.
-const ageAt = (r, back) => (now - dt(r.posted)) / DAY - back;
+const ageAt = (r, back) => ageDays(r) - back;
 const thenR = R.filter(r => ageAt(r, 30) >= 0);
 const thenRecent = thenR.filter(r => ageAt(r, 30) <= 90 && ageAt(r, 30) >= 3);
 const thenPool = thenRecent.length >= 3 ? thenRecent : thenR;
@@ -128,7 +128,7 @@ if (audNames.length) {
 
 // Top reels: all time by default, with a last-90-days option
 const topCards = range => {
-  const pool = range === "90" ? R.filter(r => (now - dt(r.posted)) / DAY <= 90) : R;
+  const pool = range === "90" ? R.filter(r => ageDays(r) <= 90) : R;
   const list = pool.filter(r => val(r) != null).sort((a, b) => val(b) - val(a)).slice(0, 6);
   return `<p class="lede">Most-${HAS_VIEWS ? "viewed" : "liked"} reels${range === "90" ? " posted in the last 90 days" : ""}. Tap one for its numbers.</p>` +
     (list.length ? `<div class="reels">${list.map((r, i) => `<button class="reel" onclick="openReel('${r.id}')">${thumb(r, i === 0 ? '<span class="badge">Top reel</span>' : "")}
