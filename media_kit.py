@@ -132,6 +132,15 @@ _has_viewers = not demo.empty and demo["breakdown"].str.startswith("viewers:").a
 _has_followers = not demo.empty and (~demo["breakdown"].str.contains(":")).any()
 
 
+def whole_percents(shares):
+    """Round shares to whole percents that add up to exactly 100 (largest remainder)."""
+    raw = [s * 100 for s in shares]
+    out = [int(r) for r in raw]
+    for i in sorted(range(len(raw)), key=lambda i: raw[i] - out[i], reverse=True)[:100 - sum(out)]:
+        out[i] += 1
+    return out
+
+
 class CountryNames(dict):
     """Two-letter country code -> full name (falls back to the code)."""
     def __bool__(self):  # an empty dict is falsy, which would skip the lookup
@@ -201,13 +210,19 @@ if not demo.empty:
             st.markdown('<div class="glass panel">' + bars(age, by_value=False) + "</div>", unsafe_allow_html=True)
         if "gender" in demo_totals:
             g = demo[demo["breakdown"] == "gender"].set_index("label")["value"]
-            tot = g.sum()
-            m, f = g.get("M", 0) / tot, g.get("F", 0) / tot
+            parts = [("Women", "F", LANE), ("Men", "M", MOSS), ("Not specified", "U", RULE)]
+            shares = [g.get(code, 0) / g.sum() for _, code, _ in parts]
+            pcts = whole_percents(shares)
+            pg = prev_share.get("gender")
             st.markdown("### Gender")
-            st.markdown(f"""<div class="glass panel"><div class="split"><span style="width:{m*100:.1f}%;background:{MOSS}"></span>
-              <span style="width:{f*100:.1f}%;background:{LANE}"></span><span style="flex:1;background:{RULE}"></span></div>
-              <div class="legend"><i style="background:{MOSS}"></i>Men {m:.0%}{change(m, prev_share["gender"].get("M", 0.0)) if "gender" in prev_share else ""} &nbsp;&nbsp;
-              <i style="background:{LANE}"></i>Women {f:.0%}{change(f, prev_share["gender"].get("F", 0.0)) if "gender" in prev_share else ""}</div></div>""", unsafe_allow_html=True)
+            bar = "".join(f'<span style="width:{s*100:.2f}%;background:{col}"></span>' for (_, _, col), s in zip(parts, shares))
+            legend = " &nbsp;&nbsp; ".join(
+                f'<span style="white-space:nowrap"><i style="background:{col}"></i>{name} {p}%'
+                f'{change(s, pg.get(code, 0.0)) if pg else ""}</span>'
+                for (name, code, col), s, p in zip(parts, shares, pcts))
+            st.markdown(f'<div class="glass panel"><div class="split">{bar}</div><div class="legend">{legend}</div>'
+                        f'<p class="note" style="margin-top:10px">"Not specified" is people who haven\'t shared a gender with Instagram.</p></div>',
+                        unsafe_allow_html=True)
     with c2:
         if "city" in demo_totals:
             st.markdown("### Top cities")
@@ -274,40 +289,47 @@ if not ads.empty:
 </a>""")
     st.markdown('<div class="reels" style="margin-top:22px">' + "".join(acards) + "</div>", unsafe_allow_html=True)
 
-# ---------------- growth ----------------
-st.markdown("## Growth")
-st.markdown('<p class="lede">Follower count and weekly views over time.</p>', unsafe_allow_html=True)
-g1, g2 = st.columns(2, gap="large")
-with g1:
-    st.markdown("### Followers")
-    f = acct[["captured_date", "followers"]]
-    lo = f["followers"].min() * 0.97
-    chart = alt.Chart(f).mark_area(
-        line={"color": MOSS, "strokeWidth": 2.5},
-        color=alt.Gradient(gradient="linear", x1=1, x2=1, y1=1, y2=0,
-                           stops=[alt.GradientStop(color="rgba(143,175,120,0)", offset=0),
-                                  alt.GradientStop(color="rgba(143,175,120,.22)", offset=1)]),
-    ).encode(
-        x=alt.X("captured_date:T", title=None, axis=alt.Axis(format="%b %-d", tickCount=5)),
-        y=alt.Y("followers:Q", title=None, scale=alt.Scale(domain=[lo, f["followers"].max()]),
-                axis=alt.Axis(format="~s", tickCount=4)),
-        tooltip=[alt.Tooltip("captured_date:T", title="Date"), alt.Tooltip("followers:Q", format=",")],
-    ).properties(height=240)
-    st.altair_chart(chart, width="stretch")
-with g2:
-    st.markdown("### Weekly views")
-    if daily["views"].notna().any():
-        w = daily.set_index("captured_date")["views"].resample("W-SUN").sum().reset_index()
-        w = w[(w["views"] > 0) & (w["captured_date"] <= daily["captured_date"].max())].tail(10)
-        chart = alt.Chart(w).mark_bar(color=SAGE, size=26).encode(
-            x=alt.X("captured_date:T", title=None, axis=alt.Axis(format="%b %-d", tickCount=5),
-                    scale=alt.Scale(padding=20)),
-            y=alt.Y("views:Q", title=None, axis=alt.Axis(format="~s", tickCount=4)),
-            tooltip=[alt.Tooltip("captured_date:T", title="Week ending"), alt.Tooltip("views:Q", format=",")],
-        ).properties(height=240)
-        st.altair_chart(chart, width="stretch")
-    else:
-        st.caption("Weekly views appear after a few daily syncs.")
+# ---------------- growth (hidden until there's a trend to show) ----------------
+fol_pts = acct[["captured_date", "followers"]].dropna()
+show_fol = fol_pts["captured_date"].nunique() >= 2
+wk = pd.DataFrame()
+if daily["views"].notna().any():
+    wk = daily.set_index("captured_date")["views"].resample("W-SUN").sum().reset_index()
+    wk = wk[(wk["views"] > 0) & (wk["captured_date"] <= daily["captured_date"].max())].tail(10)
+show_wk = len(wk) >= 2
+if show_fol or show_wk:
+    st.markdown("## Growth")
+    st.markdown('<p class="lede">' + " and ".join(x for x, ok in (("Follower count", show_fol), ("weekly views", show_wk)) if ok)
+                + ' over time.</p>', unsafe_allow_html=True)
+    cols = st.columns(2, gap="large") if (show_fol and show_wk) else [st.container()]
+    ci = 0
+    if show_fol:
+        with cols[ci]:
+            st.markdown("### Followers")
+            lo = fol_pts["followers"].min() * 0.97
+            chart = alt.Chart(fol_pts).mark_area(
+                line={"color": MOSS, "strokeWidth": 2.5},
+                color=alt.Gradient(gradient="linear", x1=1, x2=1, y1=1, y2=0,
+                                   stops=[alt.GradientStop(color="rgba(143,175,120,0)", offset=0),
+                                          alt.GradientStop(color="rgba(143,175,120,.22)", offset=1)]),
+            ).encode(
+                x=alt.X("captured_date:T", title=None, axis=alt.Axis(format="%b %-d", tickCount=5)),
+                y=alt.Y("followers:Q", title=None, scale=alt.Scale(domain=[lo, fol_pts["followers"].max()]),
+                        axis=alt.Axis(format="~s", tickCount=4)),
+                tooltip=[alt.Tooltip("captured_date:T", title="Date"), alt.Tooltip("followers:Q", format=",")],
+            ).properties(height=240)
+            st.altair_chart(chart, width="stretch")
+        ci = min(ci + 1, len(cols) - 1)
+    if show_wk:
+        with cols[ci]:
+            st.markdown("### Weekly views")
+            chart = alt.Chart(wk).mark_bar(color=SAGE, size=26).encode(
+                x=alt.X("captured_date:T", title=None, axis=alt.Axis(format="%b %-d", tickCount=5),
+                        scale=alt.Scale(padding=20)),
+                y=alt.Y("views:Q", title=None, axis=alt.Axis(format="~s", tickCount=4)),
+                tooltip=[alt.Tooltip("captured_date:T", title="Week ending"), alt.Tooltip("views:Q", format=",")],
+            ).properties(height=240)
+            st.altair_chart(chart, width="stretch")
 
 updated = snaps["captured_date"].max()
 st.markdown(f'<div class="foot">Numbers come directly from the Instagram API and update daily. '

@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Media Kit</title>
 <meta name="description" content="Instagram creator media kit with audience and performance stats.">
-<link rel="stylesheet" href="style.css?v=202611110340">
+<link rel="stylesheet" href="style.css?v=202611110346">
 </head>
 <body>
 <div class="wrap">
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
   <main id="app"></main>
 </div>
-<script src="data.js?v=202611110340"></script>
+<script src="data.js?v=202611110346"></script>
 <script>
 if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -26,7 +26,7 @@ if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   window.__EMPTY = true;
 }
 </script>
-<script src="common.js?v=202611110340"></script>
+<script src="common.js?v=202611110346"></script>
 <script>
 if (!window.__EMPTY) {
 mark("kit");
@@ -102,10 +102,14 @@ function renderAudience(name) {
     ${name !== "followers" ? "" : hasPrev ? `Changes compare with ${esc(D.demo_prev_month)}.` : "Month-over-month changes appear once last month's numbers are saved."}</p><div class="cols"><div>`;
   if (demo.age) h += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false, key: "age" });
   if (demo.gender) {
-    const g = demo.gender, t = sum(g), m = (g.M || 0) / t, f = (g.F || 0) / t;
+    // Women / Men / Not specified, rounded so they add up to exactly 100
+    const g = demo.gender, t = sum(g), parts = [["Women", "F", "var(--moss)"], ["Men", "M", "var(--fern)"], ["Not specified", "U", "var(--ivy)"]];
+    const shares = parts.map(([, c]) => (g[c] || 0) / t), raw = shares.map(s => s * 100), pc = raw.map(Math.floor);
+    raw.map((r, i) => [r - pc[i], i]).sort((a, b) => b[0] - a[0]).slice(0, 100 - pc.reduce((a, b) => a + b, 0)).forEach(([, i]) => pc[i]++);
     h += `<h3 style="margin-top:18px">Gender</h3><div class="glass panel"><div style="display:flex;height:8px;margin:6px 0 10px">
-      <span style="width:${m * 100}%;background:var(--fern)"></span><span style="width:${f * 100}%;background:var(--moss)"></span><span style="flex:1;background:var(--ivy)"></span></div>
-      <div class="na" style="font-size:.92rem;color:var(--stone)">Men ${Math.round(m * 100)}%${change(m, "gender", "M")} &nbsp; Women ${Math.round(f * 100)}%${change(f, "gender", "F")}</div></div>`;
+      ${parts.map(([, , col], i) => `<span style="width:${shares[i] * 100}%;background:${col}"></span>`).join("")}</div>
+      <div class="na" style="font-size:.92rem;color:var(--stone)">${parts.map(([n, c, col], i) => `<span style="white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;margin-right:6px;background:${col}"></i>${n} ${pc[i]}%${change(shares[i], "gender", c)}</span>`).join(" &nbsp; ")}</div>
+      <p class="note">"Not specified" is people who haven't shared a gender with Instagram.</p></div>`;
   }
   h += `</div><div>`;
   if (demo.city) h += `<h3>Top cities</h3>` + bars(demo.city, { key: "city" });
