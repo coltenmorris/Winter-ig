@@ -34,6 +34,8 @@ t = t[t["kind"] == "reel"] if not t.empty else t  # analytics are reels only; th
 st.caption("Tip: open any reel and use Portfolio to tag it as an ad. Ads leave your organic stats on the media kit "
            "and appear under Brand partnerships.")
 st.header("Creator analytics")
+from live import live_followers  # noqa: E402
+live_followers(int(acct["followers"].iloc[-1]) if not acct.empty else None)
 if t.empty:
     st.info("No data yet. Run the sync first.")
     st.stop()

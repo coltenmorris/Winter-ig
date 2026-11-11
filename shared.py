@@ -243,6 +243,16 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 .summary {{ display:flex; flex-wrap:wrap; gap: 6px 32px; color:{STONE}; margin: 14px 0; }}
 .summary b {{ font-size:1.6rem; font-weight:700; letter-spacing:-.04em; color:{MIST}; margin-right:6px; }}
 
+/* Live follower ticker */
+.live {{ padding: 18px 22px; margin: 6px 0 18px; }}
+.live-top {{ color:{STONE}; font-size:.85rem; font-weight:500; display:flex; align-items:center; gap:8px; }}
+.live .dot {{ width:8px; height:8px; border-radius:50%; background:#7CC47F; box-shadow: 0 0 0 0 rgba(124,196,127,.6); animation: livepulse 2s infinite; }}
+@keyframes livepulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(124,196,127,.55); }} 70% {{ box-shadow: 0 0 0 9px rgba(124,196,127,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(124,196,127,0); }} }}
+@media (prefers-reduced-motion: reduce) {{ .live .dot {{ animation: none; }} }}
+.live-n {{ font-size: clamp(3rem, 9vw, 5.6rem); font-weight: 800; letter-spacing: -.055em; line-height: .95; color:{FERNB};
+           font-variant-numeric: tabular-nums; margin-top: 6px; }}
+.live-sub {{ color:{STONE}; font-size:.85rem; margin-top: 8px; line-height:1.5; }}
+
 /* Period summary */
 .ps {{ display:grid; grid-template-columns: minmax(0,1.6fr) repeat(5, minmax(0,1fr)); gap: 0 12px; align-items:center;
        padding: 11px 16px; border-bottom: 1px solid {RULE_C}; font-variant-numeric: tabular-nums; }}
