@@ -57,7 +57,7 @@ h3 { font-size: 1.05rem; letter-spacing: -.01em; margin: 0 0 12px; font-weight: 
   font: 600 .95rem var(--sans); border: 0; cursor: pointer; }
 .btn:hover { background: var(--lamp); }
 
-.created { color: var(--stone); opacity: .8; font-size: .82rem; margin-top: 10px; }
+.created { color: var(--stone); font-size: .82rem; margin-top: 10px; }
 
 /* Stats board: hairline columns */
 .board { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 44px; background: none; border: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }

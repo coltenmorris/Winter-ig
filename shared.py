@@ -165,7 +165,7 @@ a {{ color: {FERNB}; }}
     text-decoration: none !important; font-weight: 600; }}
 .contact:hover {{ background: {LAMP}; }}
 
-.created {{ color:{STONE}; opacity:.8; font-size:.82rem; margin-top: 10px; }}
+.created {{ color:{STONE}; font-size:.82rem; margin-top: 10px; }}
 
 /* Stats board */
 .board {{ display:grid; grid-template-columns: repeat(4, 1fr); margin-top: 44px; background: none !important;
