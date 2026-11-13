@@ -7,14 +7,14 @@
     radial-gradient(34% 26% at 22% 30%, rgba(78,106,71,.62), transparent 70%),
     radial-gradient(40% 30% at 74% 64%, rgba(30,62,52,.85), transparent 72%),
     radial-gradient(26% 20% at 48% 88%, rgba(78,106,71,.40), transparent 70%);
-  filter: blur(60px); animation: thermA 46s ease-in-out infinite alternate; }
+  filter: blur(60px); animation: thermA 32s ease-in-out infinite alternate; }
 .thermal i:nth-child(2) {
   background:
     radial-gradient(22% 16% at 66% 26%, rgba(230,212,156,.22), transparent 70%),
     radial-gradient(28% 20% at 30% 70%, rgba(163,139,98,.30), transparent 70%),
     radial-gradient(24% 18% at 86% 84%, rgba(143,175,120,.22), transparent 70%),
     radial-gradient(18% 14% at 12% 12%, rgba(143,175,120,.14), transparent 70%);
-  filter: blur(50px); animation: thermB 34s ease-in-out infinite alternate; }
+  filter: blur(50px); animation: thermB 24s ease-in-out infinite alternate; }
 /* film grain */
 .thermal i:nth-child(3) { inset: 0; opacity: .09; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
@@ -23,13 +23,13 @@
   background: radial-gradient(120% 90% at 50% 40%, transparent 45%, rgba(10,15,12,.65) 100%); }
 @keyframes thermA {
   0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-  50%  { transform: translate3d(5%, -4%, 0) rotate(9deg) scale(1.08); }
-  100% { transform: translate3d(-4%, 5%, 0) rotate(-7deg) scale(1.03); }
+  50%  { transform: translate3d(8%, -6%, 0) rotate(14deg) scale(1.12); }
+  100% { transform: translate3d(-7%, 7%, 0) rotate(-11deg) scale(1.04); }
 }
 @keyframes thermB {
   0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1.05); }
-  50%  { transform: translate3d(-6%, 3%, 0) rotate(-12deg) scale(1); }
-  100% { transform: translate3d(4%, -5%, 0) rotate(6deg) scale(1.1); }
+  50%  { transform: translate3d(-9%, 5%, 0) rotate(-18deg) scale(1); }
+  100% { transform: translate3d(7%, -8%, 0) rotate(10deg) scale(1.14); }
 }
 @media (prefers-reduced-motion: reduce) { .thermal i { animation: none !important; } }
 /* static-color option */
