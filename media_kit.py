@@ -347,15 +347,6 @@ updated = snaps["captured_date"].max()
 st.markdown(f'<div class="foot">Numbers come directly from the Instagram API and update daily. '
             f'Last updated {updated:%B %-d, %Y}.</div>', unsafe_allow_html=True)
 
-# ---------------- replay the latest follower milestone (50K, 55K, ...) ----------------
-from live import confetti_html, milestone_for
-_latest = max(st.session_state.get("live_prev_hero") or 0, int(followers))
-_m = milestone_for(_latest)
-if _m:
-    if st.button(f"Replay {_m // 1000}K celebration", icon=":material/replay:", key="replay_milestone"):
-        st.session_state["replay_n"] = st.session_state.get("replay_n", 0) + 1
-        st.markdown(confetti_html(_m, st.session_state["replay_n"]), unsafe_allow_html=True)
-
 # ---------------- live follower count (off by default, switch at the very bottom) ----------------
 st.toggle("Show live follower count", value=False, key="live_kit",
           help="Replaces the follower number at the top with a live count that updates every 5 seconds.")

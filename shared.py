@@ -335,6 +335,11 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 @keyframes milestone {{ 0% {{ opacity: 0; transform: translate(-50%, -40%) scale(.9); }} 12%, 75% {{ opacity: 1; transform: translate(-50%, -50%) scale(1); }}
   100% {{ opacity: 0; transform: translate(-50%, -55%) scale(1); }} }}
 @media (prefers-reduced-motion: reduce) {{ .confetti {{ display: none; }} }}
+.st-key-replaybox button {{ background: none !important; border: 0 !important; box-shadow: none !important;
+  padding: 0 !important; min-height: 0 !important; color: {STONE} !important; gap: 6px; }}
+.st-key-replaybox button p {{ font-size: .875rem; }}
+.st-key-replaybox button span[data-testid="stIconMaterial"] {{ font-size: 1.05rem; }}
+.st-key-replaybox button:hover, .st-key-replaybox button:focus-visible {{ color: {MIST} !important; }}
 .live-banner.paused {{ border-color: rgba(230,212,156,.35); background: rgba(230,212,156,.07); }}
 .live-banner.paused .dot {{ background: {LAMP}; animation: none; }}
 .live-why {{ color:{STONE}; font-size:.78rem; margin-top: 6px; max-width: 420px; margin-left: auto; overflow-wrap: anywhere; }}

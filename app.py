@@ -14,3 +14,11 @@ nav = st.navigation([
 ], position="hidden")
 nav.run()
 background_switch()  # bottom of every page
+if nav.title == "Media kit":
+    # Replay the latest follower milestone, under the switches
+    import db
+    from live import replay_milestone_button
+    _c = db.connect()
+    _f = _c.execute("SELECT followers FROM account_snapshots ORDER BY captured_date DESC LIMIT 1").fetchone()
+    _c.close()
+    replay_milestone_button(int(_f[0]) if _f and _f[0] is not None else None)

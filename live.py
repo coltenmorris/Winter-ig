@@ -157,3 +157,15 @@ def live_followers(synced_followers: int | None, hero: bool = False):
           Updated {now} PT, refreshes every {REFRESH_SECONDS} seconds</div></div>""", unsafe_allow_html=True)
 
     ticker()
+
+
+def replay_milestone_button(synced_followers: int | None):
+    """Small text-style button under the page's switches that replays the latest milestone celebration."""
+    latest = max(st.session_state.get("live_prev_hero") or 0, synced_followers or 0)
+    m = milestone_for(latest)
+    if not m:
+        return
+    with st.container(key="replaybox"):
+        if st.button(f"Replay {m // 1000}K celebration", icon=":material/replay:", key="replay_milestone"):
+            st.session_state["replay_n"] = st.session_state.get("replay_n", 0) + 1
+            st.markdown(confetti_html(m, st.session_state["replay_n"]), unsafe_allow_html=True)
