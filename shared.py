@@ -324,11 +324,14 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
 @keyframes confetti-fall {{ from {{ transform: translate3d(0,0,0) rotate(0deg); }}
   to {{ transform: translate3d(var(--dx), 112vh, 0) rotate(var(--r)); }} }}
 @keyframes confetti-fade {{ 0%, 80% {{ opacity: 1; }} 100% {{ opacity: 0; }} }}
-.milestone {{ position: fixed; left: 50%; top: 38%; z-index: 10000; pointer-events: none; transform: translate(-50%, -50%);
-  text-align: center; color: {MIST}; animation: milestone 4.6s ease forwards; padding: 36px 56px;
+.celebrate-dim {{ position: fixed; inset: 0; z-index: 9998; pointer-events: none; background: rgba(5,8,6,.96);
+  animation: celebrate-dim 4.6s ease forwards; }}
+@keyframes celebrate-dim {{ 0% {{ opacity: 0; }} 10%, 80% {{ opacity: 1; }} 100% {{ opacity: 0; }} }}
+.milestone {{ position: fixed; left: 50%; top: 50%; z-index: 10000; pointer-events: none; transform: translate(-50%, -50%);
+  text-align: center; color: {MIST}; animation: milestone 4.6s ease forwards; padding: 36px 56px; white-space: nowrap;
   background: radial-gradient(closest-side, rgba(14,20,17,.85), rgba(14,20,17,0)); text-shadow: 0 2px 24px rgba(14,20,17,.9); }}
-.milestone b {{ display: block; font-size: clamp(3rem, 9vw, 7rem); font-weight: 800; letter-spacing: -.05em; line-height: 1; color: {FERNB}; }}
-.milestone span {{ font-size: 1.1rem; font-weight: 600; }}
+.milestone b {{ display: block; font-size: clamp(4.5rem, 19vw, 15rem); font-weight: 800; letter-spacing: -.05em; line-height: 1; color: {FERNB}; }}
+.milestone span {{ font-size: clamp(1.1rem, 2.2vw, 1.8rem); font-weight: 600; }}
 @keyframes milestone {{ 0% {{ opacity: 0; transform: translate(-50%, -40%) scale(.9); }} 12%, 75% {{ opacity: 1; transform: translate(-50%, -50%) scale(1); }}
   100% {{ opacity: 0; transform: translate(-50%, -55%) scale(1); }} }}
 @media (prefers-reduced-motion: reduce) {{ .confetti {{ display: none; }} }}

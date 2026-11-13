@@ -15,13 +15,19 @@ from shared import cfg
 from sync import clean_token, describe_token
 
 REFRESH_SECONDS = 5
-MILESTONE = 50_000
+FIRST_MILESTONE, MILESTONE_STEP = 50_000, 5_000  # 50K, 55K, 60K, ...
+
+
+def milestone_for(n: int | None) -> int | None:
+    """Latest follower milestone reached (50,000 and every 5,000 after), or None below 50,000."""
+    return n // MILESTONE_STEP * MILESTONE_STEP if n is not None and n >= FIRST_MILESTONE else None
 CONFETTI_COLORS = ["#8FAF78", "#E6D49C", "#D3DBCF", "#4E6A47", "#C9A27A", "#B5D69C"]
 
 
-def confetti_html(n: int) -> str:
-    """One-time confetti rain over the whole screen (pure CSS, gone in under 5 seconds, before the next refresh)."""
-    rnd = random.Random(n)
+def confetti_html(milestone: int, nonce: int = 0) -> str:
+    """Milestone celebration: the screen dims, the number appears large in the center and confetti rains down.
+    Pure CSS, gone in under 5 seconds (before the next refresh). `nonce` makes a replay restart the animation."""
+    rnd = random.Random(milestone)
     bits = []
     for _ in range(140):
         w = rnd.uniform(6, 11)
@@ -29,8 +35,11 @@ def confetti_html(n: int) -> str:
             f'<i style="left:{rnd.uniform(0, 100):.1f}%;width:{w:.0f}px;height:{w * rnd.uniform(.4, .7):.0f}px;'
             f'background:{rnd.choice(CONFETTI_COLORS)};--dx:{rnd.uniform(-18, 18):.0f}vw;--r:{rnd.uniform(-720, 720):.0f}deg;'
             f'animation-duration:{rnd.uniform(2.6, 3.6):.2f}s;animation-delay:{rnd.uniform(0, .9):.2f}s"></i>')
-    return (f'<div class="confetti" aria-hidden="true">{"".join(bits)}</div>'
-            f'<div class="milestone" role="status"><b>{MILESTONE:,}</b><span>followers on Instagram</span></div>')
+    # Alternate the wrapper tag on each replay so the browser builds fresh elements and the animation restarts
+    tag = "section" if nonce % 2 else "div"
+    return (f'<{tag} class="celebrate" data-run="{nonce}"><div class="celebrate-dim" aria-hidden="true"></div>'
+            f'<div class="confetti" aria-hidden="true">{"".join(bits)}</div>'
+            f'<div class="milestone" role="status"><b>{milestone:,}</b><span>followers on Instagram</span></div></{tag}>')
 
 
 @st.cache_data(show_spinner=False)
@@ -118,12 +127,13 @@ def live_followers(synced_followers: int | None, hero: bool = False):
         start = st.session_state.setdefault("live_start", n)
         prev = st.session_state.get(key, n)
         st.session_state[key] = n
-        # 50K celebration: once per visit, when the count crosses 50,000 while watching
-        # (or within the first 100 followers past it, so a reload right after still gets it)
-        if (n >= MILESTONE and not st.session_state.get("celebrated_50k")
-                and (prev < MILESTONE or n < MILESTONE + 100)):
-            st.session_state["celebrated_50k"] = True
-            st.markdown(confetti_html(n), unsafe_allow_html=True)
+        # Milestone celebration (50K, 55K, 60K, ...): once per milestone per visit, when the count crosses it
+        # while watching (or within the first 100 followers past it, so a reload right after still gets it)
+        m = milestone_for(n)
+        done = st.session_state.setdefault("celebrated", set())
+        if m and m not in done and (prev < m or n < m + 100):
+            done.add(m)
+            st.markdown(confetti_html(m), unsafe_allow_html=True)
         if hero:
             st.markdown(f"""<div class="live-hero">
               <div class="live-n" aria-label="{n:,} followers">{odometer_html(prev, n, phase)}</div>
