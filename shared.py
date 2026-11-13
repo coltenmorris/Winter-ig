@@ -219,7 +219,14 @@ a {{ color: {FERNB}; }}
 .demo-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap: 0 48px; align-items: stretch; }}
 .demo-left h3 + .glass + h3 {{ margin-top: 22px; }}
 .demo-age {{ display:flex; flex-direction:column; }}
-.gnote {{ font-size: .74rem !important; line-height: 1.3; margin: 8px 0 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+.info {{ position: relative; display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px;
+  margin-left: 6px; border: 1px solid currentColor; border-radius: 50%; font: italic 600 .62rem/1 Georgia, serif;
+  color: {STONE}; cursor: help; vertical-align: 1px; outline-offset: 2px; }}
+.info:hover, .info:focus-visible {{ color: {MIST}; }}
+.info .tip {{ position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translate(-50%, 4px); width: max-content; max-width: 240px;
+  padding: 8px 11px; background: #1C2620; border: 1px solid {RULE_C}; color: {MIST}; font: normal 400 .8rem/1.35 '{FONT}', 'Helvetica Neue', Arial, sans-serif;
+  white-space: normal; text-align: left; opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; z-index: 50; }}
+.info:hover .tip, .info:focus .tip {{ opacity: 1; transform: translate(-50%, 0); }}
 .demo-left .panel > :last-child {{ margin-bottom: 0 !important; }}
 .demo-age .panel {{ flex: 1; display:flex; flex-direction:column; }}
 .demo-age .bars {{ flex: 1; display:flex; flex-direction:column; justify-content: space-around; }}
@@ -386,7 +393,8 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
   .reels {{ grid-template-columns: repeat(2, minmax(0,1fr)); gap: 22px 12px; }}
   .demo-grid {{ grid-template-columns: 1fr; }}
   .demo-age .bars .row {{ margin: 10px 0; }}
-  .gnote {{ white-space: normal; }}
+  .info .tip {{ left: auto; right: -8px; transform: translate(0, 4px); }}
+  .info:hover .tip, .info:focus .tip {{ transform: none; }}
   .bars .row {{ grid-template-columns: 7rem 1fr 2.8rem; }}
   .bars.mom .row {{ grid-template-columns: 6rem 1fr 2.6rem 4.6rem; }}
   .rl {{ grid-template-columns: 1fr 4.4rem 4.4rem; }}

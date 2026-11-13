@@ -260,12 +260,15 @@ if not demo.empty:
         pcts = whole_percents(shares)
         pg = prev_share.get("gender")
         bar = "".join(f'<span style="width:{s*100:.2f}%;background:{col}"></span>' for (_, _, col), s in zip(parts, shares))
+        info = ('<span class="info" tabindex="0" role="note" '
+                'aria-label="Not specified is people who haven&#39;t shared a gender with Instagram.">i'
+                '<span class="tip" aria-hidden="true">"Not specified" is people who haven\'t shared a gender with Instagram.</span></span>')
         legend = " &nbsp;&nbsp; ".join(
             f'<span style="white-space:nowrap"><i style="background:{col}"></i>{name} {p}%'
-            f'{change(s, pg.get(code, 0.0)) if pg else ""}</span>'
+            f'{info if code == "U" else ""}{change(s, pg.get(code, 0.0)) if pg else ""}</span>'
             for (name, code, col), s, p in zip(parts, shares, pcts))
-        left_html += (f'<h3>Gender</h3><div class="glass panel"><div class="split">{bar}</div><div class="legend">{legend}</div>'
-                      f'<p class="note gnote">"Not specified" is people who haven\'t shared a gender with Instagram.</p></div>')
+        left_html += (f'<h3>Gender</h3><div class="glass panel"><div class="split">{bar}</div>'
+                      f'<div class="legend">{legend}</div></div>')
     if "age" in demo_totals:
         age = demo[demo["breakdown"] == "age"].sort_values("label")
         age_html = '<h3>Age</h3><div class="glass panel">' + bars(age, by_value=False) + "</div>"

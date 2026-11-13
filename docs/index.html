@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Media Kit</title>
 <meta name="description" content="Instagram creator media kit with audience and performance stats.">
-<link rel="stylesheet" href="style.css?v=202611130702">
-<link rel="stylesheet" href="thermal.css?v=202611130702">
+<link rel="stylesheet" href="style.css?v=202611130706">
+<link rel="stylesheet" href="thermal.css?v=202611130706">
 <script>try{if(localStorage.getItem("bg")==="static")document.documentElement.classList.add("bg-static")}catch(e){}</script>
 </head>
 <body>
@@ -15,7 +15,7 @@
   <nav class="top"><a href="index.html" data-p="kit">Media kit</a><a href="analytics.html" data-p="an">Analytics</a></nav>
   <main id="app"></main>
 </div>
-<script src="data.js?v=202611130702"></script>
+<script src="data.js?v=202611130706"></script>
 <script>
 if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   document.addEventListener("DOMContentLoaded", () => {
@@ -29,7 +29,7 @@ if (!window.DATA || (!DATA.reels.length && !DATA.followers.length)) {
   window.__EMPTY = true;
 }
 </script>
-<script src="common.js?v=202611130702"></script>
+<script src="common.js?v=202611130706"></script>
 <script>
 if (!window.__EMPTY) {
 mark("kit");
@@ -104,6 +104,7 @@ const sum = o => Object.values(o || {}).reduce((s, x) => s + x, 0);
 // Instagram lists only the top 45 cities/countries, so shares use the whole audience (gender or age covers everyone).
 const wholeOf = d => sum(d.gender) || sum(d.age);
 const totalFor = (d, key) => (key === "city" || key === "country") && wholeOf(d) ? wholeOf(d) : sum(d[key]);
+const INFO_U = `<span class="info" tabindex="0" role="note" aria-label="Not specified is people who haven't shared a gender with Instagram.">i<span class="tip" aria-hidden="true">"Not specified" is people who haven't shared a gender with Instagram.</span></span>`;
 function renderAudience(name) {
   const demo = AUD[name], PREV = AUD_PREV[name] || {}, hasPrev = Object.keys(PREV).length > 0;
   const prevShare = (key, k) => { const t = totalFor(PREV, key); return t ? ((PREV[key] || {})[k] || 0) / t : 0; };
@@ -128,8 +129,7 @@ function renderAudience(name) {
     raw.map((r, i) => [r - pc[i], i]).sort((a, b) => b[0] - a[0]).slice(0, 100 - pc.reduce((a, b) => a + b, 0)).forEach(([, i]) => pc[i]++);
     h += `<h3>Gender</h3><div class="glass panel"><div style="display:flex;height:8px;margin:6px 0 10px">
       ${parts.map(([, , col], i) => `<span style="width:${shares[i] * 100}%;background:${col}"></span>`).join("")}</div>
-      <div class="na" style="font-size:.92rem;color:var(--stone)">${parts.map(([n, c, col], i) => `<span style="white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;margin-right:6px;background:${col}"></i>${n} ${pc[i]}%${change(shares[i], "gender", c)}</span>`).join(" &nbsp; ")}</div>
-      <p class="note gnote">"Not specified" is people who haven't shared a gender with Instagram.</p></div>`;
+      <div class="na" style="font-size:.92rem;color:var(--stone)">${parts.map(([n, c, col], i) => `<span style="white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;margin-right:6px;background:${col}"></i>${n} ${pc[i]}%${c === "U" ? INFO_U : ""}${change(shares[i], "gender", c)}</span>`).join(" &nbsp; ")}</div></div>`;
   }
   h += `</div><div class="demo-age">`;
   if (demo.age) h += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false, key: "age" });
