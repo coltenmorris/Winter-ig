@@ -119,20 +119,20 @@ function renderAudience(name) {
   };
   let h = `<p class="lede">${name === "viewers" ? `Everyone who viewed your posts and reels since ${esc(D.viewers_since || "tracking began")}, added up month by month (Instagram only reports viewers one month at a time).` : "Your followers, as reported by Instagram."}
     Country shares are out of the whole audience; Instagram lists the top 45 countries.
-    ${name !== "followers" ? "" : hasPrev ? `Changes compare with ${esc(D.demo_prev_month)}.` : "Month-over-month changes appear once last month's numbers are saved."}</p><div class="cols"><div>`;
-  if (demo.age) h += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false, key: "age" });
+    ${name !== "followers" ? "" : hasPrev ? `Changes compare with ${esc(D.demo_prev_month)}.` : "Month-over-month changes appear once last month's numbers are saved."}</p><div class="demo-grid"><div class="demo-left">`;
+  if (demo.country) h += `<h3>Top countries</h3>` + bars(demo.country, { top: 5, names: COUNTRY, key: "country" });
   if (demo.gender) {
     // Women / Men / Not specified, rounded so they add up to exactly 100
     const g = demo.gender, t = sum(g), parts = [["Women", "F", "var(--moss)"], ["Men", "M", "var(--fern)"], ["Not specified", "U", "var(--ivy)"]];
     const shares = parts.map(([, c]) => (g[c] || 0) / t), raw = shares.map(s => s * 100), pc = raw.map(Math.floor);
     raw.map((r, i) => [r - pc[i], i]).sort((a, b) => b[0] - a[0]).slice(0, 100 - pc.reduce((a, b) => a + b, 0)).forEach(([, i]) => pc[i]++);
-    h += `<h3 style="margin-top:18px">Gender</h3><div class="glass panel"><div style="display:flex;height:8px;margin:6px 0 10px">
+    h += `<h3>Gender</h3><div class="glass panel"><div style="display:flex;height:8px;margin:6px 0 10px">
       ${parts.map(([, , col], i) => `<span style="width:${shares[i] * 100}%;background:${col}"></span>`).join("")}</div>
       <div class="na" style="font-size:.92rem;color:var(--stone)">${parts.map(([n, c, col], i) => `<span style="white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;margin-right:6px;background:${col}"></i>${n} ${pc[i]}%${change(shares[i], "gender", c)}</span>`).join(" &nbsp; ")}</div>
       <p class="note">"Not specified" is people who haven't shared a gender with Instagram.</p></div>`;
   }
-  h += `</div><div>`;
-  if (demo.country) h += `<h3>Top countries</h3>` + bars(demo.country, { top: 5, names: COUNTRY, key: "country" });
+  h += `</div><div class="demo-age">`;
+  if (demo.age) h += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false, key: "age" });
   const ref = (D.demo_refreshed || {})[name];
   h += `</div></div>` + (ref ? `<p class="note refreshed">Instagram last updated these numbers on ${fmtDate(ref + "T12:00", { month: "long", day: "numeric", year: "numeric" })}.
     It recalculates audience breakdowns on its own schedule, usually every few days.</p>` : "");

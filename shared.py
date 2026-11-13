@@ -216,6 +216,12 @@ a {{ color: {FERNB}; }}
 
 /* Bars */
 .panel {{ padding: 18px 20px 20px; }}
+.demo-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap: 0 48px; align-items: stretch; }}
+.demo-left h3 + .glass + h3 {{ margin-top: 22px; }}
+.demo-age {{ display:flex; flex-direction:column; }}
+.demo-age .panel {{ flex: 1; display:flex; flex-direction:column; }}
+.demo-age .bars {{ flex: 1; display:flex; flex-direction:column; justify-content: space-around; }}
+.demo-age .bars .row, .demo-age .row {{ margin: 0; }}
 .bars .row {{ display:grid; grid-template-columns: 9rem 1fr 3.4rem; gap: 14px; align-items:center; margin: 10px 0; }}
 .bars .lbl {{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
 .bars .track {{ height: 4px; background: {IVY}; }}
@@ -376,6 +382,8 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
   .board.five {{ grid-template-columns: repeat(2, 1fr); }}
   .board.five > div:nth-child(5) {{ grid-column: span 2; border-left: none; padding-left: 0; }}
   .reels {{ grid-template-columns: repeat(2, minmax(0,1fr)); gap: 22px 12px; }}
+  .demo-grid {{ grid-template-columns: 1fr; }}
+  .demo-age .bars .row {{ margin: 10px 0; }}
   .bars .row {{ grid-template-columns: 7rem 1fr 2.8rem; }}
   .bars.mom .row {{ grid-template-columns: 6rem 1fr 2.6rem 4.6rem; }}
   .rl {{ grid-template-columns: 1fr 4.4rem 4.4rem; }}

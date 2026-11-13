@@ -247,33 +247,30 @@ else:
 if not demo.empty:
     demo_totals = full_totals(demo)
     st.markdown(f'<p class="lede">{demo_lede}</p>', unsafe_allow_html=True)
-    c1, c2 = st.columns(2, gap="large")
-    with c1:
-        if "age" in demo_totals:
-            age = demo[demo["breakdown"] == "age"].copy()
-            age = age.sort_values("label")
-            st.markdown("### Age")
-            st.markdown('<div class="glass panel">' + bars(age, by_value=False) + "</div>", unsafe_allow_html=True)
-        if "gender" in demo_totals:
-            g = demo[demo["breakdown"] == "gender"].set_index("label")["value"]
-            parts = [("Women", "F", LANE), ("Men", "M", MOSS), ("Not specified", "U", RULE)]
-            shares = [g.get(code, 0) / g.sum() for _, code, _ in parts]
-            pcts = whole_percents(shares)
-            pg = prev_share.get("gender")
-            st.markdown("### Gender")
-            bar = "".join(f'<span style="width:{s*100:.2f}%;background:{col}"></span>' for (_, _, col), s in zip(parts, shares))
-            legend = " &nbsp;&nbsp; ".join(
-                f'<span style="white-space:nowrap"><i style="background:{col}"></i>{name} {p}%'
-                f'{change(s, pg.get(code, 0.0)) if pg else ""}</span>'
-                for (name, code, col), s, p in zip(parts, shares, pcts))
-            st.markdown(f'<div class="glass panel"><div class="split">{bar}</div><div class="legend">{legend}</div>'
-                        f'<p class="note" style="margin-top:10px">"Not specified" is people who haven\'t shared a gender with Instagram.</p></div>',
-                        unsafe_allow_html=True)
-    with c2:
-        if "country" in demo_totals:
-            names = CountryNames()
-            st.markdown("### Top countries")
-            st.markdown('<div class="glass panel">' + bars(demo[demo["breakdown"] == "country"], names, top=5) + "</div>", unsafe_allow_html=True)
+    # Top countries (top left), gender (bottom left), age down the whole right side at the same height
+    left_html, age_html = "", ""
+    if "country" in demo_totals:
+        names = CountryNames()
+        left_html += ('<h3>Top countries</h3><div class="glass panel">'
+                      + bars(demo[demo["breakdown"] == "country"], names, top=5) + "</div>")
+    if "gender" in demo_totals:
+        g = demo[demo["breakdown"] == "gender"].set_index("label")["value"]
+        parts = [("Women", "F", LANE), ("Men", "M", MOSS), ("Not specified", "U", RULE)]
+        shares = [g.get(code, 0) / g.sum() for _, code, _ in parts]
+        pcts = whole_percents(shares)
+        pg = prev_share.get("gender")
+        bar = "".join(f'<span style="width:{s*100:.2f}%;background:{col}"></span>' for (_, _, col), s in zip(parts, shares))
+        legend = " &nbsp;&nbsp; ".join(
+            f'<span style="white-space:nowrap"><i style="background:{col}"></i>{name} {p}%'
+            f'{change(s, pg.get(code, 0.0)) if pg else ""}</span>'
+            for (name, code, col), s, p in zip(parts, shares, pcts))
+        left_html += (f'<h3>Gender</h3><div class="glass panel"><div class="split">{bar}</div><div class="legend">{legend}</div>'
+                      f'<p class="note" style="margin-top:10px">"Not specified" is people who haven\'t shared a gender with Instagram.</p></div>')
+    if "age" in demo_totals:
+        age = demo[demo["breakdown"] == "age"].sort_values("label")
+        age_html = '<h3>Age</h3><div class="glass panel">' + bars(age, by_value=False) + "</div>"
+    st.markdown(f'<div class="demo-grid"><div class="demo-left">{left_html}</div><div class="demo-age">{age_html}</div></div>',
+                unsafe_allow_html=True)
     _c = db.connect()
     _ref = _c.execute("SELECT value FROM settings WHERE key=?", (f"demo_refreshed_{audience}",)).fetchone()
     _c.close()
