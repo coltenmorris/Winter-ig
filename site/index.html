@@ -69,14 +69,30 @@ let html = `
   </div>
 </section>
 <div class="script">media kit</div>
-<section class="board glass${D.views_30d != null ? " five" : ""}">
-  <div><div class="v">${fmt(avg(mains))}</div><div class="k">Average ${MAIN_LABEL} per reel, ${HP.label}</div></div>
-  ${engs.length ? `<div><div class="v">${pct(avg(engs))}</div><div class="k">Engagement rate, ${HP.label}</div></div>`
-               : `<div><div class="v">${R.length}</div><div class="k">Reels published</div></div>`}
-  ${D.views_30d != null ? `<div><div class="v">${fmt(D.views_30d)}</div><div class="k">Views in the last 30 days</div></div>` : ""}
+<div class="seg winseg" role="group" aria-label="Time range for the first three numbers" id="winseg">
+  <button data-w="30" aria-pressed="false">Last 30 days</button><button data-w="90" aria-pressed="true">Last 90 days</button><button data-w="all" aria-pressed="false">All time</button></div>
+<section class="board glass five" id="board"></section>`;
+// First three numbers follow the time-range switch (90 days by default)
+function windowStats(w) {
+  const done = R.filter(r => ageDays(r) >= 3);           // reels still collecting views are left out
+  const pool = w === "90" ? HP.reels : w === "30" ? done.filter(r => ageDays(r) <= 30) : (done.length ? done : R);
+  const label = w === "90" ? HP.label : w === "30" ? "last 30 days" : "all time";
+  const views = { 30: D.views_30d, 90: D.views_90d, all: D.views_all }[w];
+  return { pool, label, views };
+}
+function renderBoard(w) {
+  const { pool, label, views } = windowStats(w);
+  const ms = pool.map(r => val(r)).filter(v => v != null), es = pool.map(r => r.total && r.total.engagement).filter(v => v != null);
+  const viewsLabel = w === "all" ? "Views, all time" : `Views in the last ${w} days`;
+  document.getElementById("board").innerHTML = `
+  <div><div class="v">${ms.length ? fmt(avg(ms)) : "n/a"}</div><div class="k">Average ${MAIN_LABEL} per reel, ${label}</div></div>
+  ${HAS_VIEWS ? `<div><div class="v">${es.length ? pct(avg(es)) : "n/a"}</div><div class="k">Engagement rate, ${label}</div></div>`
+              : `<div><div class="v">${pool.length}</div><div class="k">Reels published, ${label}</div></div>`}
+  <div><div class="v">${views != null ? fmt(views) : "n/a"}</div><div class="k">${viewsLabel}</div></div>
   <div><div class="v">${fmt(total)}</div><div class="k">Total ${MAIN_LABEL} across reels</div></div>
-  <div><div class="v">${fmt(Math.max(...R.map(r => val(r) ?? 0)))}</div><div class="k">${MAIN_LABEL[0].toUpperCase() + MAIN_LABEL.slice(1)} on top reel</div></div>
-</section>`;
+  <div><div class="v">${fmt(Math.max(...R.map(r => val(r) ?? 0)))}</div><div class="k">${MAIN_LABEL[0].toUpperCase() + MAIN_LABEL.slice(1)} on top reel</div></div>`;
+  document.querySelectorAll("#winseg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.w === w));
+}
 
 // Audience: viewers this month or followers, with a switch
 const AUD = D.audiences || (Object.keys(D.demographics || {}).length ? { [D.demo_source]: D.demographics } : {});
@@ -102,7 +118,7 @@ function renderAudience(name) {
       <span class="track"><span class="fill" style="display:block;width:${(v / peak * 100).toFixed(1)}%"></span></span><span class="pct">${v / tot < .005 ? "<1" : Math.round(v / tot * 100)}%</span>${change(v / tot, key, k)}</div>`).join("")}</div>`;
   };
   let h = `<p class="lede">${name === "viewers" ? `Everyone who viewed your posts and reels since ${esc(D.viewers_since || "tracking began")}, added up month by month (Instagram only reports viewers one month at a time).` : "Your followers, as reported by Instagram."}
-    City and country shares are out of the whole audience; Instagram lists the top 45 of each.
+    Country shares are out of the whole audience; Instagram lists the top 45 countries.
     ${name !== "followers" ? "" : hasPrev ? `Changes compare with ${esc(D.demo_prev_month)}.` : "Month-over-month changes appear once last month's numbers are saved."}</p><div class="cols"><div>`;
   if (demo.age) h += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false, key: "age" });
   if (demo.gender) {
@@ -116,9 +132,11 @@ function renderAudience(name) {
       <p class="note">"Not specified" is people who haven't shared a gender with Instagram.</p></div>`;
   }
   h += `</div><div>`;
-  if (demo.city) h += `<h3>Top cities</h3>` + bars(demo.city, { key: "city" });
-  if (demo.country) h += `<h3 style="margin-top:18px">Top countries</h3>` + bars(demo.country, { top: 5, names: COUNTRY, key: "country" });
-  document.getElementById("audbody").innerHTML = h + `</div></div>`;
+  if (demo.country) h += `<h3>Top countries</h3>` + bars(demo.country, { top: 5, names: COUNTRY, key: "country" });
+  const ref = (D.demo_refreshed || {})[name];
+  h += `</div></div>` + (ref ? `<p class="note refreshed">Instagram last updated these numbers on ${fmtDate(ref + "T12:00", { month: "long", day: "numeric", year: "numeric" })}.
+    It recalculates audience breakdowns on its own schedule, usually every few days.</p>` : "");
+  document.getElementById("audbody").innerHTML = h;
   document.querySelectorAll("#audseg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.a === name));
 }
 if (audNames.length) {
@@ -162,6 +180,8 @@ if (ADS.length) {
 
 html += `<div class="foot">Numbers come directly from the Instagram API and update daily. Last updated ${esc(D.updated)}.</div>`;
 document.getElementById("app").innerHTML = html;
+renderBoard("90");
+document.getElementById("winseg").addEventListener("click", e => { const b = e.target.closest("button[data-w]"); if (b) renderBoard(b.dataset.w); });
 document.getElementById("topseg").addEventListener("click", e => {
   const b = e.target.closest("button[data-r]"); if (!b) return;
   document.querySelectorAll("#topseg button").forEach(x => x.setAttribute("aria-pressed", x === b));

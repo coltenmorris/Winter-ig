@@ -286,3 +286,7 @@ h2[id] { scroll-margin-top: 24px; }
   .rail a[aria-current="true"] { color: var(--mist); border-left-color: var(--fern); }
 }
 @media (prefers-reduced-motion: reduce) { .rail { transition: none; } }
+
+.winseg { margin: 40px 0 0; }
+.winseg + .board { margin-top: 12px; }
+.note.refreshed { margin-top: 22px; }

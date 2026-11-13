@@ -191,6 +191,8 @@ a {{ color: {FERNB}; }}
 /* Stats board */
 .board {{ display:grid; grid-template-columns: repeat(4, 1fr); margin-top: 44px; background: none !important;
     border: 0 !important; border-top: 1px solid {RULE_C} !important; border-bottom: 1px solid {RULE_C} !important; }}
+.st-key-winbox {{ margin-top: 36px; gap: 12px; }}
+.st-key-winbox .board {{ margin-top: 0; }}
 .board > div {{ padding: 18px 20px 20px 0; min-width: 0; }}
 .board > div + div {{ padding-left: 20px; border-left: 1px solid {RULE_C}; }}
 .board .v {{ font-size: clamp(2rem, 4vw, 3.1rem); font-weight: 700; line-height: 1; letter-spacing: -.045em; color: {MIST}; }}

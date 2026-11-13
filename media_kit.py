@@ -91,11 +91,39 @@ id_html = f"""  <div class="id glass">
     {contact}
   </div>
 """
+# Time-range switch for the first three numbers (90 days by default). The switch is drawn just above
+# the numbers, but its current value is read here so the numbers match it.
+WINDOWS = ["Last 30 days", "Last 90 days", "All time"]
+win = st.session_state.get("win") or "Last 90 days"
+_c = db.connect()
+_setting = lambda k: (lambda r: float(r[0]) if r and r[0] not in (None, "", "None") else None)(
+    _c.execute("SELECT value FROM settings WHERE key=?", (k,)).fetchone())
+_done = t[t["age_days"] >= 3]  # reels still collecting views are left out
+if win == "Last 30 days":
+    w_pool, w_label, w_views, w_vlabel = _done[_done["age_days"] <= 30], "last 30 days", views_30, v30_label
+elif win == "All time":
+    w_pool, w_label = (_done if len(_done) else t), "all time"
+    w_views, w_vlabel = _setting("views_all"), "Views, all time"
+else:
+    w_pool, w_label, w_views, w_vlabel = recent, recent_label, _setting("views_90d"), "Views in the last 90 days"
+_c.close()
+w_avg = w_pool[MAIN].mean() if len(w_pool) else None
+w_eng = w_pool["engagement_rate"].mean() if HAS_VIEWS and len(w_pool) else None
+_show = lambda v, f: f(v) if v is not None and v == v else "n/a"
+
+
+def board_block():
+    """The time-range switch sitting right above the numbers it controls."""
+    with st.container(key="winbox"):
+        st.segmented_control("Time range", WINDOWS, default="Last 90 days", key="win", label_visibility="collapsed")
+        st.markdown(board_html, unsafe_allow_html=True)
+
+
 board_html = f"""<div class="board glass{' five' if v30_label.startswith('Views in') else ''}">
-  <div><div class="v">{fmt_num(avg_views)}</div><div class="k">Average {MAIN_L} per reel, {recent_label}</div></div>
-  {f'<div><div class="v">{eng:.1%}</div><div class="k">Engagement rate, {recent_label}</div></div>' if eng is not None and eng == eng
-     else f'<div><div class="v">{len(t)}</div><div class="k">Reels published</div></div>'}
-  <div><div class="v">{fmt_num(views_30)}</div><div class="k">{v30_label}</div></div>
+  <div><div class="v">{_show(w_avg, fmt_num)}</div><div class="k">Average {MAIN_L} per reel, {w_label}</div></div>
+  {f'<div><div class="v">{_show(w_eng, lambda x: f"{x:.1%}")}</div><div class="k">Engagement rate, {w_label}</div></div>' if HAS_VIEWS
+     else f'<div><div class="v">{len(w_pool)}</div><div class="k">Reels published, {w_label}</div></div>'}
+  <div><div class="v">{_show(w_views, fmt_num)}</div><div class="k">{w_vlabel}</div></div>
   {f'<div><div class="v">{fmt_num(t[MAIN].sum())}</div><div class="k">Total {MAIN_L} across reels</div></div>' if v30_label.startswith("Views in") else ""}
   <div><div class="v">{fmt_num(best_reel)}</div><div class="k">{MAIN_L.capitalize()} on top reel</div></div>
 </div>
@@ -109,9 +137,10 @@ if live_on:
         st.markdown(f'<div class="hero solo">{id_html}</div>', unsafe_allow_html=True)
     with right:
         live_followers(int(followers), hero=True)
-    st.markdown(board_html, unsafe_allow_html=True)
+    board_block()
 else:
-    st.markdown(f'<div class="hero">{count_html}{id_html}</div>{board_html}', unsafe_allow_html=True)
+    st.markdown(f'<div class="hero">{count_html}{id_html}</div>', unsafe_allow_html=True)
+    board_block()
 
 # ---------------- audience ----------------
 def change(p, prev_share):
@@ -208,7 +237,7 @@ if _has_viewers or _has_followers:
         _prev = _monthly[(_monthly["month"] == prev_month) & (_monthly["audience"] == "followers")]
         _ptot = full_totals(_prev) if not _prev.empty else {}
         prev_share = {b: (g.set_index("label")["value"] / _ptot[b]).to_dict() for b, g in _prev.groupby("breakdown")}
-    demo_lede += " City and country shares are out of the whole audience; Instagram lists the top 45 of each."
+    demo_lede += " Country shares are out of the whole audience; Instagram lists the top 45 countries."
     if audience == "followers":
         demo_lede += (f" Changes compare with {pd.Period(prev_month).strftime('%B')}." if prev_share else
                       " Month-over-month changes appear once last month's numbers are saved.")
@@ -241,13 +270,17 @@ if not demo.empty:
                         f'<p class="note" style="margin-top:10px">"Not specified" is people who haven\'t shared a gender with Instagram.</p></div>',
                         unsafe_allow_html=True)
     with c2:
-        if "city" in demo_totals:
-            st.markdown("### Top cities")
-            st.markdown('<div class="glass panel">' + bars(demo[demo["breakdown"] == "city"]) + "</div>", unsafe_allow_html=True)
         if "country" in demo_totals:
             names = CountryNames()
             st.markdown("### Top countries")
             st.markdown('<div class="glass panel">' + bars(demo[demo["breakdown"] == "country"], names, top=5) + "</div>", unsafe_allow_html=True)
+    _c = db.connect()
+    _ref = _c.execute("SELECT value FROM settings WHERE key=?", (f"demo_refreshed_{audience}",)).fetchone()
+    _c.close()
+    if _ref and _ref[0]:
+        st.markdown(f'<p class="note" style="margin-top:22px">Instagram last updated these numbers on '
+                    f'{pd.Timestamp(_ref[0]):%B %-d, %Y}. It recalculates audience breakdowns on its own schedule, '
+                    "usually every few days.</p>", unsafe_allow_html=True)
 
 # ---------------- top reels ----------------
 st.markdown("## Top reels")

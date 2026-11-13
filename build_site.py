@@ -46,6 +46,10 @@ def stats(row: sqlite3.Row | None) -> dict | None:
     return d
 
 
+def _num(v):
+    return float(v) if v not in (None, "", "None") else None
+
+
 def build():
     conn = db.connect()
     conn.row_factory = sqlite3.Row
@@ -126,7 +130,11 @@ def build():
         "demo_prev": demo_prev, "demo_prev_month": prev_month_name,
         "audiences": audiences, "audiences_prev": {"followers": audiences_prev.get("followers", {})},
         "viewers_since": viewers_since,
-        "stories": stories, "views_30d": float(setting("views_30d")) if setting("views_30d") not in (None, "", "None") else None, "reels": reels,
+        "stories": stories,
+        "views_90d": _num(setting("views_90d")), "views_all": _num(setting("views_all")),
+        "demo_refreshed": {a: setting(f"demo_refreshed_{a}") for a in ("followers", "viewers", "engaged")
+                           if setting(f"demo_refreshed_{a}")},
+        "views_30d": float(setting("views_30d")) if setting("views_30d") not in (None, "", "None") else None, "reels": reels,
         "created": os.getenv("ACCOUNT_CREATED") or "June 15th, 2026",
         "contact": os.getenv("CONTACT_EMAIL") or None, "tagline": os.getenv("CREATOR_TAGLINE") or None,
         "updated": datetime.now(timezone.utc).astimezone(TZ).strftime("%B %-d, %Y"),

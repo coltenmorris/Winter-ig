@@ -7,9 +7,11 @@ Run it once a day (see README for scheduling):
 import argparse
 import os
 import random
+import re
 import subprocess
 from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -97,14 +99,23 @@ def run_sync(log=print, include_photos: bool = True) -> int:
             db.set_setting(conn, "totals_30d_asof", today)
         except (InstagramError, KeyError, IndexError) as e:
             log(f"Could not get 30-day {metric}: {e}")
+    # Views for the media kit's 90-day and all-time switch (all time = since the account was created)
+    created = account_created_date()
+    for key, days in (("views_90d", 90), ("views_all", (date.today() - created).days + 1)):
+        try:
+            db.set_setting(conn, key, client.account_total("views", days))
+        except (InstagramError, KeyError, IndexError) as e:
+            log(f"Could not get {key}: {e}")
     this_month = date.today().strftime("%Y-%m")
     last_month = (date.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
     followers_demo = client.demographics()
+    note_demo_refresh(conn, this_month, "followers", followers_demo)
     db.replace_demographics(conn, today, followers_demo)
     db.save_monthly_demographics(conn, this_month, "followers", followers_demo)
     # Viewers (accounts reached) and engaged accounts, this month, stored as "viewers:age" etc.
     for prefix, metric in (("viewers", "reached_audience_demographics"), ("engaged", "engaged_audience_demographics")):
         cur = client.demographics(metric)
+        note_demo_refresh(conn, this_month, prefix, cur)
         db.replace_demographics(conn, today, {f"{prefix}:{k}": v for k, v in cur.items()})
         db.save_monthly_demographics(conn, this_month, prefix, cur)
         # Last month's final numbers, if Instagram still offers that timeframe
@@ -141,6 +152,26 @@ def run_sync(log=print, include_photos: bool = True) -> int:
     maybe_refresh(conn, client, log)
     log("Sync complete.")
     return len(videos)
+
+
+def account_created_date() -> date:
+    """ACCOUNT_CREATED like 'June 15th, 2026' (defaults to that)."""
+    raw = re.sub(r"(\d)(st|nd|rd|th)", r"\1", os.getenv("ACCOUNT_CREATED") or "June 15th, 2026")
+    try:
+        return datetime.strptime(raw.strip(), "%B %d, %Y").date()
+    except ValueError:
+        return date(2026, 6, 15)
+
+
+def note_demo_refresh(conn, month: str, audience: str, new: dict):
+    """Instagram recalculates audience breakdowns on its own schedule. Record when the numbers actually change."""
+    if not new.get("gender"):
+        return
+    old = dict(conn.execute("SELECT label, value FROM demographics_monthly WHERE month=? AND audience=? AND breakdown='gender'",
+                            (month, audience)).fetchall())
+    if old != {k: int(v) for k, v in new["gender"].items()}:
+        db.set_setting(conn, f"demo_refreshed_{audience}",
+                       datetime.now(ZoneInfo("America/Los_Angeles")).strftime("%Y-%m-%d"))
 
 
 def sync_stories(conn=None, client: InstagramClient | None = None, log=print) -> int:
