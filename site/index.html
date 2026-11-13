@@ -129,7 +129,7 @@ function renderAudience(name) {
     h += `<h3>Gender</h3><div class="glass panel"><div style="display:flex;height:8px;margin:6px 0 10px">
       ${parts.map(([, , col], i) => `<span style="width:${shares[i] * 100}%;background:${col}"></span>`).join("")}</div>
       <div class="na" style="font-size:.92rem;color:var(--stone)">${parts.map(([n, c, col], i) => `<span style="white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;margin-right:6px;background:${col}"></i>${n} ${pc[i]}%${change(shares[i], "gender", c)}</span>`).join(" &nbsp; ")}</div>
-      <p class="note">"Not specified" is people who haven't shared a gender with Instagram.</p></div>`;
+      <p class="note gnote">"Not specified" is people who haven't shared a gender with Instagram.</p></div>`;
   }
   h += `</div><div class="demo-age">`;
   if (demo.age) h += `<h3>Age</h3>` + bars(demo.age, { sortByValue: false, key: "age" });

@@ -265,7 +265,7 @@ if not demo.empty:
             f'{change(s, pg.get(code, 0.0)) if pg else ""}</span>'
             for (name, code, col), s, p in zip(parts, shares, pcts))
         left_html += (f'<h3>Gender</h3><div class="glass panel"><div class="split">{bar}</div><div class="legend">{legend}</div>'
-                      f'<p class="note" style="margin-top:10px">"Not specified" is people who haven\'t shared a gender with Instagram.</p></div>')
+                      f'<p class="note gnote">"Not specified" is people who haven\'t shared a gender with Instagram.</p></div>')
     if "age" in demo_totals:
         age = demo[demo["breakdown"] == "age"].sort_values("label")
         age_html = '<h3>Age</h3><div class="glass panel">' + bars(age, by_value=False) + "</div>"

@@ -219,6 +219,8 @@ a {{ color: {FERNB}; }}
 .demo-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap: 0 48px; align-items: stretch; }}
 .demo-left h3 + .glass + h3 {{ margin-top: 22px; }}
 .demo-age {{ display:flex; flex-direction:column; }}
+.gnote {{ font-size: .74rem !important; line-height: 1.3; margin: 8px 0 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+.demo-left .panel > :last-child {{ margin-bottom: 0 !important; }}
 .demo-age .panel {{ flex: 1; display:flex; flex-direction:column; }}
 .demo-age .bars {{ flex: 1; display:flex; flex-direction:column; justify-content: space-around; }}
 .demo-age .bars .row, .demo-age .row {{ margin: 0; }}
@@ -384,6 +386,7 @@ table.ms .na {{ font-size:.78rem; font-weight: 400; color:{STONE}; letter-spacin
   .reels {{ grid-template-columns: repeat(2, minmax(0,1fr)); gap: 22px 12px; }}
   .demo-grid {{ grid-template-columns: 1fr; }}
   .demo-age .bars .row {{ margin: 10px 0; }}
+  .gnote {{ white-space: normal; }}
   .bars .row {{ grid-template-columns: 7rem 1fr 2.8rem; }}
   .bars.mom .row {{ grid-template-columns: 6rem 1fr 2.6rem 4.6rem; }}
   .rl {{ grid-template-columns: 1fr 4.4rem 4.4rem; }}
