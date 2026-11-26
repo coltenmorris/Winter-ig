@@ -333,7 +333,7 @@ for i, (_, r) in enumerate(top.iterrows()):
        <div style="text-align:right"><b>{f"{r['engagement_rate']:.1%}" if HAS_VIEWS else fmt_num(r['comments'])}</b><span>{"engagement" if HAS_VIEWS else "comments"}</span></div></div>
   <div class="t">{caption}</div></div>
 </a>""")
-st.markdown('<div class="reels ed-reels">' + "".join(cards) + "</div>", unsafe_allow_html=True)
+st.markdown('<div class="reels">' + "".join(cards) + "</div>", unsafe_allow_html=True)
 
 # ---------------- brand partnerships ----------------
 deals = [d for d in KIT.get("partnerships", []) if d.get("brand")]
@@ -377,7 +377,7 @@ if not ads.empty:
        <div style="text-align:right"><b>{eng}</b><span>engagement</span></div></div>
   <div class="t">{esc(r['title'])}, {r['posted_at']:%b %-d, %Y}</div></div>
 </a>""")
-    st.markdown('<div class="reels ed-reels" style="margin-top:22px">' + "".join(acards) + "</div>", unsafe_allow_html=True)
+    st.markdown('<div class="reels" style="margin-top:22px">' + "".join(acards) + "</div>", unsafe_allow_html=True)
 
 # ---------------- original Instagram Insights (screenshot gallery) ----------------
 _gallery = ed.gallery_html()
