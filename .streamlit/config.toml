@@ -7,6 +7,3 @@ textColor = "#D3DBCF"
 
 [client]
 toolbarMode = "minimal"
-
-[server]
-enableStaticServing = true   # serves ./static (media kit photos and Insights screenshots)
