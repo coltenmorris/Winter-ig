@@ -1,0 +1,24 @@
+{
+  "_note": "Words on the media kit that don't come from Instagram. Edit freely; the stats themselves update on their own.",
+  "categories": ["Beauty / Lifestyle", "Relatable content"],
+  "about_title": "About Winter",
+  "about": [
+    "Winter creates beauty tutorials, relatable humor and lifestyle content for a predominantly female audience.",
+    "Since launching her current Instagram in June 2026, her content has built significant organic reach."
+  ],
+  "pillars": ["Makeup & Beauty", "Relatable Humor", "Everyday Lifestyle"],
+  "audience_title": "A beauty-first audience!",
+  "partnerships_title": "Commercial momentum!",
+  "partnerships_sub": "Independently secured brand partnerships / USD",
+  "top_rate": 2000,
+  "partnerships_note": "Includes confirmed but unposted work; not a statement of payments received.",
+  "partnerships": [
+    {"brand": "Dr. Althea", "detail": "5 videos (2 posted, 3 pending)", "value": 5000},
+    {"brand": "Skintific", "detail": "1 video completed", "value": 1000},
+    {"brand": "Glossy Beauty", "detail": "1 video upcoming", "value": 1000},
+    {"brand": "Laka Beauty", "detail": "1 Reel confirmed", "value": 2000},
+    {"brand": "BeautyCam", "detail": "Confirmed collaboration", "value": 1000},
+    {"brand": "Knock", "detail": "1 video confirmed", "value": 1500},
+    {"brand": "Starface", "detail": "2 UGC videos completed", "value": 1000}
+  ]
+}

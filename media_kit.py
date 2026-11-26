@@ -1,6 +1,5 @@
 """Partner-facing media kit."""
 import html
-from datetime import datetime
 
 import pandas as pd
 import streamlit as st
@@ -8,7 +7,8 @@ import streamlit as st
 import db
 import flags as flags_mod
 
-from shared import LANE, MOSS, SAGE, NAVY, SAND, SPLIT, RULE, cfg, fmt_num, load, video_table
+import editorial as ed
+from shared import cfg, fmt_num, load, video_table
 
 media, snaps, acct, daily, demo, profile = load()
 t_all = flags_mod.ensure_tags(video_table(media, snaps, window_days=30))
@@ -53,7 +53,7 @@ def last_month(cur, prev, show):
     """'Last month X' line, with a green arrow only when the figure went up."""
     if prev is None or prev != prev or cur is None or cur != cur:
         return ""
-    arrow = '<span class="up" aria-label="up from last month">&#9650;</span>' if cur > prev else ""
+    arrow = '<i class="ed-up" title="up from last month">&#9650;</i> ' if cur > prev else ""
     return f'<div class="lm">{arrow}Last month {show(prev)}</div>'
 
 d30 = daily[daily["captured_date"] > now - pd.Timedelta(days=30)]
@@ -75,13 +75,6 @@ avatar = (f'<img class="avatar" src="{esc(pic)}" alt="" referrerpolicy="no-refer
           else f'<div class="avatar">{esc((name or handle)[:1].upper())}</div>')
 contact = (f'<a class="contact" href="mailto:{esc(email)}?subject=Partnership%20with%20%40{esc(handle)}">'
            f'Contact for partnerships</a>' if email else "")
-count_html = f"""  <div class="count glass">
-    <span class="px"></span>
-    <div class="n">{fmt_num(followers)}</div>
-    <div class="l">followers on Instagram</div>
-    <div class="stripes short" style="margin-top:22px"></div>
-  </div>
-"""
 id_html = f"""  <div class="id glass">
     <h1>{esc(name or handle)}</h1>
     <div class="stripes" style="margin-top:14px"></div>
@@ -91,6 +84,40 @@ id_html = f"""  <div class="id glass">
     {contact}
   </div>
 """
+# ---------------- editorial cover (laid out after the PDF media kit) ----------------
+ed.inject()
+KIT = ed.content()
+SEC = ed.Sections(name or handle)
+_c = db.connect()
+_v90 = _c.execute("SELECT value FROM settings WHERE key='views_90d'").fetchone()
+_c.close()
+views_90 = float(_v90[0]) if _v90 and _v90[0] not in (None, "", "None") else None
+cover_img = ed.asset("kit/cover.jpg") or pic
+_name_lines = "<br>".join(esc(w) for w in (name or handle).split())
+cover_html = f"""<div class="ed-cover">
+  <div class="ed-panel">
+    <div class="ed-k">Creator / Media kit</div><hr>
+    <div class="ed-name">{_name_lines}</div>
+    <div class="ed-cats">{"".join(f"<div>{esc(c)}</div>" for c in KIT.get("categories", []))}</div><hr>
+    <div class="ed-stat"><b>{fmt_num(followers)}</b><span>Instagram followers</span></div>
+    {f'<div class="ed-stat"><b>{fmt_num(views_90)}</b><span>90 day views</span></div>' if views_90 else ""}
+    <div class="ed-panel-foot"><div class="h">@{esc(handle)}</div><div class="d">{now:%B %Y}</div>{contact}</div>
+  </div>
+  <div class="ed-photo">{f'<img src="{esc(cover_img)}" alt="{esc(name or handle)}" referrerpolicy="no-referrer">' if cover_img else ""}</div>
+</div>"""
+_about = KIT.get("about") or ([bio] if bio else [])
+_pillars = KIT.get("pillars", [])
+_pimg = ed.asset("kit/profile.jpg")
+profile_html = SEC.head("Profile", "The creator") + f"""<div class="ed-profile">
+  {f'<div class="ed-pimg"><img src="{esc(_pimg)}" alt="{esc(name or handle)}"></div>' if _pimg else ""}
+  <div>
+    <div class="ed-about"><h4>{esc(KIT.get("about_title") or "About")}</h4>{"".join(f"<p>{esc(x)}</p>" for x in _about)}
+      {f'<div class="created">Account created {esc(created)}</div>' if created else ""}</div>
+    {('<div class="ed-label">Content pillars</div><ol class="ed-pillars">'
+      + "".join(f"<li><span>{i}</span>{esc(x)}</li>" for i, x in enumerate(_pillars, 1)) + "</ol>") if _pillars else ""}
+  </div>
+</div>"""
+
 # Time-range switch for the first three numbers (90 days by default). The switch is drawn just above
 # the numbers, but its current value is read here so the numbers match it.
 WINDOWS = ["Last 30 days", "Last 90 days", "All time"]
@@ -112,22 +139,37 @@ w_eng = w_pool["engagement_rate"].mean() if HAS_VIEWS and len(w_pool) else None
 _show = lambda v, f: f(v) if v is not None and v == v else "n/a"
 
 
+def _sum(col):
+    return w_pool[col].sum(min_count=1) if col in w_pool and len(w_pool) else None
+
+
+_win_title = {"Last 30 days": "last 30 days", "Last 90 days": "last 90 days", "All time": "all time"}[win]
+_through = f"{now:%B %-d, %Y}"
+signals = [(lbl, _sum(col)) for lbl, col in (("Likes", "likes"), ("Saves", "saved"), ("Shares", "shares"), ("Reposts", "reposts"))]
+signals = [(lbl, v) for lbl, v in signals if v is not None and v == v]
+board_html = f"""<div class="ed-tiles">
+  <div class="ed-tile"><b>{_show(w_views, fmt_num)}</b><span>{"Total views" if w_views is not None else w_vlabel}</span></div>
+  <div class="ed-tile"><b>{_show(w_avg, fmt_num)}</b><span>Average {MAIN_L} per reel</span>{last_month(w_avg, prev_avg, fmt_num) if win == "Last 90 days" else ""}</div>
+  {f'<div class="ed-tile"><b>{_show(w_eng, lambda x: f"{x:.1%}")}</b><span>Engagement rate</span>{last_month(w_eng, prev_eng, lambda x: f"{x:.1%}") if win == "Last 90 days" else ""}</div>' if HAS_VIEWS
+     else f'<div class="ed-tile"><b>{len(w_pool)}</b><span>Reels published</span></div>'}
+  <div class="ed-tile"><b>{fmt_num(best_reel)}</b><span>{MAIN_L.capitalize()} on top reel (all time)</span></div>
+</div>
+<div class="ed-band" aria-hidden="true"></div>
+<p class="ed-fine">{fmt_num(t[MAIN].sum())} total {MAIN_L} across all {len(t)} reels / reel averages use reels in the {esc(w_label)} that are at least 3 days old</p>
+""" + (f"""<div class="ed-label">Engagement signals / reels, {esc(w_label)}</div>
+<div class="ed-signals">{"".join(f'<div><b>{fmt_num(v)}</b><span>{lbl}</span></div>' for lbl, v in signals)}</div>""" if signals else "") + \
+    '<p class="ed-fine" style="margin-top:34px">Metrics come straight from the Instagram API; figures are rounded.</p>'
+
+
 def board_block():
-    """The time-range switch sitting right above the numbers it controls."""
+    """Performance section, with the time-range switch sitting right above the numbers it controls."""
+    st.markdown(SEC.head("Performance", f"Performance / {_win_title}",
+                         f"Instagram performance / {_win_title}, through {_through}"), unsafe_allow_html=True)
     with st.container(key="winbox"):
         st.segmented_control("Time range", WINDOWS, default="Last 90 days", key="win", label_visibility="collapsed")
         st.markdown(board_html, unsafe_allow_html=True)
 
 
-board_html = f"""<div class="board glass{' five' if v30_label.startswith('Views in') else ''}">
-  <div><div class="v">{_show(w_avg, fmt_num)}</div><div class="k">Average {MAIN_L} per reel, {w_label}</div></div>
-  {f'<div><div class="v">{_show(w_eng, lambda x: f"{x:.1%}")}</div><div class="k">Engagement rate, {w_label}</div></div>' if HAS_VIEWS
-     else f'<div><div class="v">{len(w_pool)}</div><div class="k">Reels published, {w_label}</div></div>'}
-  <div><div class="v">{_show(w_views, fmt_num)}</div><div class="k">{w_vlabel}</div></div>
-  {f'<div><div class="v">{fmt_num(t[MAIN].sum())}</div><div class="k">Total {MAIN_L} across reels</div></div>' if v30_label.startswith("Views in") else ""}
-  <div><div class="v">{fmt_num(best_reel)}</div><div class="k">{MAIN_L.capitalize()} on top reel</div></div>
-</div>
-"""
 live_on = st.session_state.get("live_kit", False)
 if live_on:
     # Live count takes the place of the big follower number (switch is at the bottom of the page)
@@ -137,10 +179,10 @@ if live_on:
         st.markdown(f'<div class="hero solo">{id_html}</div>', unsafe_allow_html=True)
     with right:
         live_followers(int(followers), hero=True)
-    board_block()
 else:
-    st.markdown(f'<div class="hero">{count_html}{id_html}</div>', unsafe_allow_html=True)
-    board_block()
+    st.markdown(cover_html, unsafe_allow_html=True)
+st.markdown(profile_html, unsafe_allow_html=True)
+board_block()
 
 # ---------------- audience ----------------
 def change(p, prev_share):
@@ -151,40 +193,6 @@ def change(p, prev_share):
     if d > 0:
         return f'<span class="chg"><span class="up">&#9650;</span> +{d} pts</span>'
     return f'<span class="chg">{"no change" if d == 0 else f"{d} pts"}</span>'
-
-
-def bars(df: pd.DataFrame, label_map=None, top=6, by_value=True) -> str:
-    if by_value:
-        df = df.sort_values("value", ascending=False).head(top)
-    b = df["breakdown"].iloc[0]
-    total = demo_totals[b]
-    pshare = prev_share.get(b)
-    peak = df["value"].max()
-    rows = []
-    for _, r in df.iterrows():
-        lbl = label_map.get(r["label"], r["label"]) if label_map else r["label"]
-        lbl = str(lbl).split(",")[0]
-        p, w = r["value"] / total, r["value"] / peak
-        rows.append(f'<div class="row"><span class="lbl">{esc(str(lbl))}</span>'
-                    f'<span class="track"><span class="fill" style="width:{w*100:.1f}%;display:block"></span></span>'
-                    f'<span class="pct">{"<1%" if p < .005 else f"{p:.0%}"}</span>'
-                    + (change(p, pshare.get(r["label"], 0.0)) if pshare is not None else "") + "</div>")
-    return f'<div class="bars{" mom" if pshare is not None else ""}">' + "".join(rows) + "</div>"
-
-
-# Audience breakdowns: viewers this month (accounts reached) or followers, picked with a switch.
-_all_demo = demo
-_has_viewers = not demo.empty and demo["breakdown"].str.startswith("viewers:").any()
-_has_followers = not demo.empty and (~demo["breakdown"].str.contains(":")).any()
-
-
-def whole_percents(shares):
-    """Round shares to whole percents that add up to exactly 100 (largest remainder)."""
-    raw = [s * 100 for s in shares]
-    out = [int(r) for r in raw]
-    for i in sorted(range(len(raw)), key=lambda i: raw[i] - out[i], reverse=True)[:100 - sum(out)]:
-        out[i] += 1
-    return out
 
 
 class CountryNames(dict):
@@ -211,7 +219,17 @@ def full_totals(d: pd.DataFrame) -> dict:
     return {b: (whole if whole and b in ("city", "country") else s) for b, s in sums.items()}
 
 
+def age_buckets(age: pd.Series) -> list[tuple[str, float, list[str]]]:
+    """Age groups as on the PDF: 13-17 ... 35-44, then everything 45 and over together."""
+    young = [(k, float(v), [k]) for k, v in sorted(age.items()) if not str(k)[:2].isdigit() or int(str(k)[:2]) < 45]
+    older = [k for k in age.index if str(k)[:2].isdigit() and int(str(k)[:2]) >= 45]
+    return young + ([("45+", float(age[older].sum()), older)] if older else [])
+
+
+pct1 = lambda x: f"{x:.1%}"
 prev_month = (pd.Timestamp.today().to_period("M") - 1).strftime("%Y-%m")
+_all_demo = demo
+_has_followers = not demo.empty and (~demo["breakdown"].str.contains(":")).any()
 # Viewers "all time": Instagram only gives this week or this month, so add up every month the sync has saved.
 _conn = db.connect()
 _monthly = pd.read_sql("SELECT month, audience, breakdown, label, value FROM demographics_monthly", _conn)
@@ -221,74 +239,80 @@ viewers_all = _vm.groupby(["breakdown", "label"], as_index=False)["value"].sum()
 viewers_since = pd.Period(_vm["month"].min()).strftime("%B %Y") if not _vm.empty else None
 _has_viewers = not viewers_all.empty
 if _has_viewers or _has_followers:
-    st.markdown("## Who's watching")
     options = (["Followers"] if _has_followers else []) + (["Viewers, all time"] if _has_viewers else [])
-    pick = st.segmented_control("Audience", options, default=options[0], key="aud",
-                                label_visibility="collapsed") or options[0]
-    audience = "followers" if pick == "Followers" else "viewers"
+    _pick = st.session_state.get("aud") or options[0]
+    audience = "viewers" if _pick == "Viewers, all time" and _has_viewers else ("followers" if _has_followers else "viewers")
+    st.markdown(SEC.head("Audience", KIT.get("audience_title") or "Who's watching",
+                         "Follower demographics / Instagram Insights" if audience == "followers"
+                         else f"Viewer demographics / everyone who viewed since {viewers_since}"), unsafe_allow_html=True)
+    st.segmented_control("Audience", options, default=options[0], key="aud", label_visibility="collapsed")
     if audience == "viewers":
         demo = viewers_all
-        demo_lede = (f"Everyone who viewed your posts and reels since {viewers_since}, added up month by month "
-                     "(Instagram only reports viewers one month at a time).")
+        demo_lede = ("Viewers are added up month by month, because Instagram only reports them one month at a time.")
         prev_share = {}
     else:
         demo = _all_demo[~_all_demo["breakdown"].str.contains(":")]
-        demo_lede = "Your followers, as reported by Instagram."
+        demo_lede = ""
         _prev = _monthly[(_monthly["month"] == prev_month) & (_monthly["audience"] == "followers")]
         _ptot = full_totals(_prev) if not _prev.empty else {}
         prev_share = {b: (g.set_index("label")["value"] / _ptot[b]).to_dict() for b, g in _prev.groupby("breakdown")}
-    demo_lede += " Country shares are out of the whole audience; Instagram lists the top 45 countries."
-    if audience == "followers":
-        demo_lede += (f" Changes compare with {pd.Period(prev_month).strftime('%B')}." if prev_share else
-                      " Month-over-month changes appear once last month's numbers are saved.")
+        if prev_share:
+            demo_lede = f"Changes compare with {pd.Period(prev_month).strftime('%B')}."
 else:
     demo = demo.iloc[0:0]
     prev_share = {}
 if not demo.empty:
     demo_totals = full_totals(demo)
-    st.markdown(f'<p class="lede">{demo_lede}</p>', unsafe_allow_html=True)
-    # Top countries (top left), gender (bottom left), age down the whole right side at the same height
-    left_html, age_html = "", ""
-    if "country" in demo_totals:
-        names = CountryNames()
-        left_html += ('<h3>Top countries</h3><div class="glass panel">'
-                      + bars(demo[demo["breakdown"] == "country"], names, top=5) + "</div>")
+    series = lambda b: demo[demo["breakdown"] == b].set_index("label")["value"]
+    tiles = []
     if "gender" in demo_totals:
-        g = demo[demo["breakdown"] == "gender"].set_index("label")["value"]
-        parts = [("Women", "F", LANE), ("Men", "M", MOSS), ("Not specified", "U", RULE)]
-        shares = [g.get(code, 0) / g.sum() for _, code, _ in parts]
-        pcts = whole_percents(shares)
-        pg = prev_share.get("gender")
-        bar = "".join(f'<span style="width:{s*100:.2f}%;background:{col}"></span>' for (_, _, col), s in zip(parts, shares))
-        info = ('<span class="info" tabindex="0" role="note" '
-                'aria-label="Not specified is people who haven&#39;t shared a gender with Instagram.">i'
-                '<span class="tip" aria-hidden="true">"Not specified" is people who haven\'t shared a gender with Instagram.</span></span>')
-        legend = " &nbsp;&nbsp; ".join(
-            f'<span style="white-space:nowrap"><i style="background:{col}"></i>{name} {p}%'
-            f'{info if code == "U" else ""}{change(s, pg.get(code, 0.0)) if pg else ""}</span>'
-            for (name, code, col), s, p in zip(parts, shares, pcts))
-        left_html += (f'<h3>Gender</h3><div class="glass panel"><div class="split">{bar}</div>'
-                      f'<div class="legend">{legend}</div></div>')
+        g = series("gender")
+        _fm = g.get("F", 0) + g.get("M", 0)  # like Instagram's own Insights: share of people who list a gender
+        if _fm:
+            tiles.append(f'<div class="ed-tile dark"><b>{pct1(g.get("F", 0) / _fm)}</b><span>Female</span></div>')
     if "age" in demo_totals:
-        age = demo[demo["breakdown"] == "age"].sort_values("label")
-        age_html = '<h3>Age</h3><div class="glass panel">' + bars(age, by_value=False) + "</div>"
-    st.markdown(f'<div class="demo-grid"><div class="demo-left">{left_html}</div><div class="demo-age">{age_html}</div></div>',
-                unsafe_allow_html=True)
+        a = series("age")
+        core = a[[k for k in a.index if k in ("18-24", "25-34")]].sum()
+        tiles.append(f'<div class="ed-tile"><b>{pct1(core / a.sum())}</b><span>Ages 18-34</span></div>')
+    h = f'<div class="ed-tiles big">{"".join(tiles)}</div>' if tiles else ""
+    if "gender" in demo_totals:
+        g = series("gender")
+        _fm = g.get("F", 0) + g.get("M", 0)
+        if _fm:
+            h += (f'<p class="ed-fine">Female share is out of people who list a gender, as in Instagram Insights '
+                  f'(men {pct1(g.get("M", 0) / _fm)}). {pct1(g.get("U", 0) / g.sum())} of the audience '
+                  "hasn&#39;t shared a gender with Instagram.</p>")
+    if "age" in demo_totals:
+        a, pa = series("age"), prev_share.get("age")
+        rows = age_buckets(a)
+        peak = max(v for _, v, _ in rows) or 1
+        tot = a.sum()
+        h += '<div class="ed-label">Age distribution</div><div class="ed-bars">' + "".join(
+            f'<div class="r"><span>{esc(str(k))}</span><span class="t"><span class="f" style="width:{v / peak * 100:.1f}%"></span></span>'
+            f'<span class="p">{pct1(v / tot)}{change(v / tot, sum(pa.get(x, 0.0) for x in keys)) if pa else ""}</span></div>'
+            for k, v, keys in rows) + "</div>"
+    if "country" in demo_totals:
+        c = series("country").sort_values(ascending=False).head(5)
+        names = CountryNames()
+        items = [f"{esc(names.get(k, k))} {pct1(v / demo_totals['country'])}" for k, v in c.items()]
+        h += ('<div class="ed-label">Top countries</div><div class="ed-countries">' + " / ".join(items[:3])
+              + ("<br>" + " / ".join(items[3:]) if len(items) > 3 else "") + "</div>")
     _c = db.connect()
     _ref = _c.execute("SELECT value FROM settings WHERE key=?", (f"demo_refreshed_{audience}",)).fetchone()
     _c.close()
+    notes = [demo_lede, "Country shares are out of the whole audience."]
     if _ref and _ref[0]:
-        st.markdown(f'<p class="note" style="margin-top:22px">Instagram last updated these numbers on '
-                    f'{pd.Timestamp(_ref[0]):%B %-d, %Y}. It recalculates audience breakdowns on its own schedule, '
-                    "usually every few days.</p>", unsafe_allow_html=True)
+        notes.append(f"Instagram last updated these numbers on {pd.Timestamp(_ref[0]):%B %-d, %Y}.")
+    h += f'<p class="ed-fine" style="margin-top:30px">{" ".join(n for n in notes if n)}</p>'
+    st.markdown(h, unsafe_allow_html=True)
 
 # ---------------- top reels ----------------
-st.markdown("## Top reels")
+st.markdown(SEC.head("Content", "Top-performing reels",
+                     f'Most-{"viewed" if HAS_VIEWS else "liked"} reels / tap one to open it on Instagram'),
+            unsafe_allow_html=True)
 top_range = st.segmented_control("Top reels range", ["All time", "Last 90 days"], default="All time",
                                  key="top_range", label_visibility="collapsed") or "All time"
 pool_top = t if top_range == "All time" else t[t["age_days"] <= 90]
-st.markdown(f'<p class="lede">Most-{"viewed" if HAS_VIEWS else "liked"} reels'
-            f'{"" if top_range == "All time" else " posted in the last 90 days"}.</p>', unsafe_allow_html=True)
 top = pool_top.sort_values(MAIN, ascending=False).head(6)
 if top.empty:
     st.markdown('<p class="lede">No reels posted in the last 90 days.</p>', unsafe_allow_html=True)
@@ -312,20 +336,32 @@ for i, (_, r) in enumerate(top.iterrows()):
 st.markdown('<div class="reels">' + "".join(cards) + "</div>", unsafe_allow_html=True)
 
 # ---------------- brand partnerships ----------------
+deals = [d for d in KIT.get("partnerships", []) if d.get("brand")]
+if deals or not ads.empty:
+    h = SEC.head("Partnerships", KIT.get("partnerships_title") or "Brand partnerships",
+                 KIT.get("partnerships_sub") or "Brand partnerships")
+    if deals:
+        vals = [float(d.get("value") or 0) for d in deals]
+        money = lambda v: f"${v:,.0f}"
+        h += (f'<div class="ed-deal"><b>{money(sum(vals))}</b><div><h4>Confirmed partnership value</h4>'
+              f'<p>{len(deals)} brand {"partner" if len(deals) == 1 else "partners"}'
+              + (f' / {money(float(KIT["top_rate"]))} top Reel rate' if KIT.get("top_rate") else "") + '</p></div></div>'
+              '<div class="ed-brands">' + "".join(
+                  f'<div class="ed-brand"><div><b>{esc(d["brand"])}</b><span>{esc(d.get("detail", ""))}</span></div>'
+                  f'<em>{money(float(d.get("value") or 0)) if d.get("value") else ""}</em></div>' for d in deals) + "</div>")
+        if KIT.get("partnerships_note"):
+            h += f'<p class="ed-fine" style="margin-top:26px">{esc(KIT["partnerships_note"])}</p>'
+    st.markdown(h, unsafe_allow_html=True)
 if not ads.empty:
-    st.markdown("## Brand partnerships")
     ad_main = "views" if ads["views"].notna().any() else "likes"
     a_avg, o_avg = ads[ad_main].mean(), t[ad_main].mean() if not t.empty else None
     a_eng = ads["engagement_rate"].mean()
     vs = (f"{(a_avg / o_avg - 1):+.0%} vs. a typical reel" if o_avg and a_avg == a_avg else "")
-    brands = sorted({b for b in ads["brand"] if b})
-    st.markdown(f'<p class="lede">Sponsored posts and reels{" for " + ", ".join(esc(b) for b in brands) if brands else ""}, '
-                f'and how they typically perform.</p>', unsafe_allow_html=True)
-    st.markdown(f"""<div class="board glass" style="margin-top:8px">
-      <div><div class="v">{len(ads)}</div><div class="k">Sponsored {"post" if len(ads) == 1 else "posts"}</div></div>
-      <div><div class="v">{fmt_num(a_avg)}</div><div class="k">Average {ad_main} per ad</div><div class="d">{vs}</div></div>
-      <div><div class="v">{f"{a_eng:.1%}" if a_eng == a_eng else "n/a"}</div><div class="k">Average engagement on ads</div></div>
-      <div><div class="v">{fmt_num(ads[ad_main].sum())}</div><div class="k">Total {ad_main} delivered</div></div>
+    st.markdown(f"""<div class="ed-label">Sponsored posts / how they perform</div><div class="ed-tiles">
+      <div class="ed-tile"><b>{len(ads)}</b><span>Sponsored {"post" if len(ads) == 1 else "posts"}</span></div>
+      <div class="ed-tile"><b>{fmt_num(a_avg)}</b><span>Average {ad_main} per ad</span><div class="lm">{vs}</div></div>
+      <div class="ed-tile"><b>{f"{a_eng:.1%}" if a_eng == a_eng else "n/a"}</b><span>Average engagement on ads</span></div>
+      <div class="ed-tile"><b>{fmt_num(ads[ad_main].sum())}</b><span>Total {ad_main} delivered</span></div>
     </div>""", unsafe_allow_html=True)
     acards = []
     for _, r in ads.sort_values("posted_at", ascending=False).iterrows():
@@ -343,9 +379,17 @@ if not ads.empty:
 </a>""")
     st.markdown('<div class="reels" style="margin-top:22px">' + "".join(acards) + "</div>", unsafe_allow_html=True)
 
+# ---------------- original Instagram Insights (screenshot gallery) ----------------
+_gallery = ed.gallery_html()
+if _gallery:
+    st.markdown(SEC.head("Original insights", "Original Instagram Insights",
+                         "Source screenshots from Instagram's professional dashboard / supplied by creator. "
+                         "Tap one to see it full size.") + _gallery, unsafe_allow_html=True)
+
 updated = snaps["captured_date"].max()
-st.markdown(f'<div class="foot">Numbers come directly from the Instagram API and update daily. '
-            f'Last updated {updated:%B %-d, %Y}.</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="ed-foot"><span>@{esc(handle)} / Creator media kit</span>'
+            f'<span>Numbers come directly from the Instagram API and update daily. Last updated {updated:%B %-d, %Y}.</span></div>',
+            unsafe_allow_html=True)
 
 # ---------------- live follower count (off by default, switch at the very bottom) ----------------
 st.toggle("Show live follower count", value=False, key="live_kit",

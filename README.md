@@ -10,6 +10,15 @@ Two pages in one app:
   views or engagement on each day. Tap a day to see its reels, then open any reel for its
   first 24 hours, first week and to-date stats.
 
+**Editing the media kit:** the words that don't come from Instagram (categories, About text,
+content pillars, section titles and brand partnerships) live in `kit_content.json`. The cover and
+profile photos are `static/kit/cover.jpg` and `static/kit/profile.jpg`.
+
+**Insights screenshots:** the "Original Instagram Insights" gallery at the bottom of the media kit
+reads `static/gallery/gallery.json`. To add a screenshot, drop the image in `static/gallery/` and add a
+line with its `category` (Home, Performance, Content or Audience), a short `title`, and the `taken`
+and `added` dates (YYYY-MM-DD).
+
 If the daily sync fails with "Cannot parse access token", re-copy the token from the Meta
 dashboard's **Generate access tokens** section and paste only the token (it starts with `IG`)
 into the `IG_ACCESS_TOKEN` secret.

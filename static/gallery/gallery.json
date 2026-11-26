@@ -1,0 +1,17 @@
+{
+  "_note": "Original Instagram Insights screenshots shown at the bottom of the media kit. To add one: put the image in static/gallery/, then add a line below. category is the Instagram dashboard tab it came from (Home, Performance, Content or Audience). taken = the day the screenshot was taken, added = the day it went on the media kit (YYYY-MM-DD).",
+  "categories": ["Home", "Performance", "Content", "Audience"],
+  "shots": [
+    {"file": "exhibit-01.jpg", "category": "Home", "title": "Summary / 90 days", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-02.jpg", "category": "Performance", "title": "Views, viewers and follower views", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-03.jpg", "category": "Performance", "title": "Follower and non-follower views", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-04.jpg", "category": "Audience", "title": "Gender, age range and top locations", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-05.jpg", "category": "Audience", "title": "Top locations, languages and active times", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-06.jpg", "category": "Content", "title": "Top Reels by views / 180 days", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-07.jpg", "category": "Performance", "title": "Interactions: likes", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-08.jpg", "category": "Performance", "title": "Interactions: comments", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-09.jpg", "category": "Performance", "title": "Interactions: reposts", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-10.jpg", "category": "Performance", "title": "Interactions: shares", "taken": "2026-11-17", "added": "2026-11-26"},
+    {"file": "exhibit-11.jpg", "category": "Performance", "title": "Interactions: saves", "taken": "2026-11-17", "added": "2026-11-26"}
+  ]
+}
